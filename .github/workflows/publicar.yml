@@ -1,0 +1,81 @@
+# Publica la app en GitHub Pages:
+#   main -> https://alanvillar05.github.io/control-de-gastos/        (versión estable)
+#   dev  -> https://alanvillar05.github.io/control-de-gastos/beta/   (versión de prueba)
+name: Publicar
+
+on:
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # El entorno github-pages solo acepta publicaciones desde main. Por eso un push a dev
+  # no publica directamente: le pide a main que vuelva a publicar, y esa publicación
+  # incluye la versión de prueba.
+  pedir-publicacion:
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pedir que main publique de nuevo
+        run: gh workflow run publicar.yml --ref main --repo "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  publicar:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Bajar main (versión estable)
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          path: estable
+
+      - name: Bajar dev (versión de prueba), si existe
+        continue-on-error: true
+        uses: actions/checkout@v5
+        with:
+          ref: dev
+          path: prueba
+
+      - name: Armar el sitio
+        run: |
+          mkdir -p _site
+          rsync -a --exclude '.git' --exclude '.github' estable/ _site/
+          if [ -f prueba/index.html ]; then
+            mkdir -p _site/beta
+            rsync -a --exclude '.git' --exclude '.github' prueba/ _site/beta/
+            # Que la versión de prueba se distinga al instalarla en el celular
+            sed -i 's/"name": "Libreta de cuentas"/"name": "Libreta de cuentas (beta)"/; s/"short_name": "Libreta"/"short_name": "Libreta beta"/' _site/beta/manifest.webmanifest
+          fi
+          # version.json: la app lo consulta para avisar que hay una versión nueva
+          for dir in _site _site/beta; do
+            if [ -f "$dir/index.html" ]; then
+              v=$(grep -oP "const VERSION = '\K[^']+" "$dir/index.html" || true)
+              if [ -n "$v" ]; then printf '{"version":"%s"}\n' "$v" > "$dir/version.json"; fi
+            fi
+          done
+          find _site -maxdepth 2 -type f | sort
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+      - name: Publicar en GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

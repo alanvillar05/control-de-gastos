@@ -39,7 +39,8 @@ No hay servidor ni base de datos compartida. Cada persona guarda lo suyo en el a
 | `sw.js` | *Service worker*: permite abrirla sin conexión. |
 | `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` | Íconos de la app. |
 | `capturas/` | Imágenes de este README. |
-| `.nojekyll` | Le indica a GitHub Pages que publique los archivos tal cual, sin procesarlos con Jekyll. |
+| `.github/workflows/publicar.yml` | Publica `main` y `dev` (en `/beta/`) en GitHub Pages en cada push. |
+| `.nojekyll` | Evita el procesamiento con Jekyll si alguna vez se publica directo desde una rama. |
 
 ## Probarla en la compu
 
@@ -51,12 +52,20 @@ python3 -m http.server 8000
 
 Y abrir http://localhost:8000.
 
-## Publicar cambios
+## Cómo se trabaja: ramas y versión de prueba
 
-1. Reemplazar `index.html` (**Add file › Upload files**) y hacer commit.
-2. GitHub Pages lo publica en unos minutos y les llega a todos la próxima vez que abran la app con internet.
+| Rama | Se publica en | Para qué |
+|---|---|---|
+| `main` | https://alanvillar05.github.io/control-de-gastos/ | Versión estable, la que usa todo el mundo. |
+| `dev` | https://alanvillar05.github.io/control-de-gastos/beta/ | Versión de prueba para revisar los cambios antes de lanzarlos. |
 
-Si se modifican `sw.js`, el manifest o los íconos, hay que subir también el número de `CACHE` en `sw.js` (por ejemplo, de `libreta-v1` a `libreta-v2`) para que los celulares descarten la copia vieja.
+1. Los cambios se hacen y se suben a `dev`. El workflow `.github/workflows/publicar.yml` los publica en `/beta/` en unos minutos.
+2. Se prueban en la beta. Lo que se anota ahí se guarda aparte, así que no toca los datos reales.
+3. Si está todo bien, se abre un *pull request* de `dev` a `main` y se acepta (*merge*). Esa es la versión que les llega a todos la próxima vez que abran la app con internet.
+
+Cada versión nueva sube el número de `VERSION` en `index.html` y agrega una entrada en `NOVEDADES`: la app se las muestra a cada persona una sola vez después de actualizar. Si se modifican `sw.js`, el manifest o los íconos, también hay que subir el número de `CACHE` en `sw.js` para que los celulares descarten la copia vieja.
+
+> GitHub Pages tiene que estar configurado con **Settings › Pages › Source: GitHub Actions**.
 
 ## Limitaciones conocidas
 
