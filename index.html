@@ -7,6 +7,7 @@
 <meta name="description" content="Anotá tus ingresos, gastos y deudas. Todo se guarda en tu celular.">
 <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0F1729" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Libreta">
 <link rel="manifest" href="manifest.webmanifest">
@@ -782,7 +783,7 @@ function validarCopia(d) {
    y uno de configuración ("config"), en el espacio privado del usuario.
    Si no hay nube, localStorage. */
 const LS_KEY = 'libreta-cuentas-v1';
-const LINK_ARTEFACTO = 'https://claude.ai/artifact/2P7m1ExRiUd4nEhH1APzhK';
+const LINK_ARTEFACTO = ''; // solo se usa dentro de Claude
 const enClaude = () => !!(window.claude && typeof window.claude.use === 'function');
 const linkApp = () => (enClaude() ? LINK_ARTEFACTO : location.href.split(/[?#]/)[0]);
 const Store = {

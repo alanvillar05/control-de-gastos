@@ -1,30 +1,68 @@
-# Libreta de cuentas
+# 📒 Libreta de cuentas
 
-App web para anotar ingresos, gastos, deudas y lo que te deben, con saldos por cuenta (Mercado Pago, efectivo y las que agregues), resumen anual y exportación a Excel.
+App web para controlar ingresos, gastos y deudas desde el celular. Se instala como una app, funciona sin conexión y **los datos nunca salen del dispositivo**.
 
-**Privacidad:** no hay servidor ni base de datos compartida. Lo que anota cada persona se guarda solo en el navegador de su dispositivo (`localStorage`). Nadie más lo ve.
+**▶ Probala:** https://alanvillar05.github.io/control-de-gastos/
 
-## Archivos
+![Pantallas de la app: movimientos del mes, resumen anual y control del saldo de Mercado Pago](capturas/libreta.png)
+
+## Funcionalidades
+
+- **Ingresos y gastos** con categorías propias (nombre e ícono), que se crean desde el mismo formulario.
+- **Varias cuentas** (Mercado Pago, efectivo y las que agregues), con el saldo que deberías tener y pases de plata entre cuentas que no cuentan como ingreso ni como gasto.
+- **Control contra el saldo real:** ingresás cuánto tenés de verdad y la app te dice si falta o sobra plata, y te ayuda a anotar la diferencia.
+- **Deudas:** lo que debés y lo que te deben, con pagos parciales y vencimientos. Si pusiste plata vos, se descuenta de la cuenta y vuelve a entrar al registrar el cobro.
+- **Resumen anual** mes a mes y por categoría, con **exportación a Excel** (las fórmulas se recalculan si editás la planilla).
+- **Copia de seguridad** en `.json`, restauración y botón de deshacer al borrar.
+- Modo oscuro automático e instalación en la pantalla de inicio.
+
+## Privacidad
+
+No hay servidor ni base de datos compartida. Cada persona guarda lo suyo en el almacenamiento de su navegador (`localStorage`), así que nadie más puede verlo. La contra: si se borran los datos del navegador, se pierde lo anotado, por eso conviene descargar una copia de seguridad cada tanto desde **⋯ › Descargar copia de seguridad**.
+
+## Decisiones técnicas
+
+| Decisión | Por qué |
+|---|---|
+| Montos guardados en **centavos enteros** | En JavaScript `0.1 + 0.2` da `0.30000000000000004` (coma flotante). Con enteros, las sumas de plata son exactas. |
+| HTML, CSS y JavaScript **en un solo archivo, sin frameworks** | No necesita compilación: se publica tal cual y es fácil de mantener. |
+| Categorías y cuentas referenciadas **por id**, no por nombre | Renombrar una categoría actualiza todo el historial sin romper nada. |
+| **PWA** (*Progressive Web App*) con *service worker* "red primero" | Con internet siempre carga la última versión publicada; sin conexión usa la copia guardada. |
+| **ExcelJS** cargado solo al exportar | La app abre rápido; la librería se descarga únicamente cuando hace falta. |
+
+## Estructura
 
 | Archivo | Para qué sirve |
 |---|---|
-| `index.html` | La app completa (HTML, CSS y JavaScript en un solo archivo). |
-| `manifest.webmanifest` | Nombre e íconos para instalarla en la pantalla de inicio. |
-| `sw.js` | Service worker: permite abrirla sin conexión. |
-| `icon-*.png`, `apple-touch-icon.png` | Íconos. |
+| `index.html` | La app completa. |
+| `manifest.webmanifest` | Nombre, colores e íconos para instalarla como app. |
+| `sw.js` | *Service worker*: permite abrirla sin conexión. |
+| `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` | Íconos de la app. |
+| `capturas/` | Imágenes de este README. |
+| `.nojekyll` | Le indica a GitHub Pages que publique los archivos tal cual, sin procesarlos con Jekyll. |
 
-## Publicar en GitHub Pages
+## Probarla en la compu
 
-1. Crear un repositorio **público** (por ejemplo `libreta`).
-2. Subir todos estos archivos a la raíz del repositorio.
-3. **Settings › Pages › Build and deployment**: *Source* = *Deploy from a branch*, *Branch* = `main`, carpeta `/ (root)`. Guardar.
-4. En unos minutos queda en `https://USUARIO.github.io/libreta/`.
+El *service worker* no funciona abriendo el archivo con doble clic (`file://`), así que hay que servirla con un servidor local:
 
-## Actualizar
+```bash
+python3 -m http.server 8000
+```
 
-Reemplazar `index.html` en el repositorio. Si se cambian otros archivos, subir también el número de `CACHE` en `sw.js` (por ejemplo `libreta-v2`) para que los celulares descarten la copia vieja.
+Y abrir http://localhost:8000.
 
-## Recomendaciones para quien la usa
+## Publicar cambios
 
-- Hacer de vez en cuando una copia desde **⋯ › Descargar copia de seguridad**: si se borran los datos del navegador, se pierde lo anotado.
-- Para tenerla como app: en Chrome, **⋮ › Agregar a la pantalla principal** (o *Instalar app*).
+1. Reemplazar `index.html` (**Add file › Upload files**) y hacer commit.
+2. GitHub Pages lo publica en unos minutos y les llega a todos la próxima vez que abran la app con internet.
+
+Si se modifican `sw.js`, el manifest o los íconos, hay que subir también el número de `CACHE` en `sw.js` (por ejemplo, de `libreta-v1` a `libreta-v2`) para que los celulares descarten la copia vieja.
+
+## Limitaciones conocidas
+
+- Los datos no se sincronizan entre dispositivos: cada navegador tiene su propia libreta. Para pasarlos de uno a otro, usar la copia de seguridad.
+- Exportar a Excel requiere conexión, porque la librería se descarga en ese momento.
+
+## Licencia
+
+[MIT](LICENSE) © [alanvillar05](https://github.com/alanvillar05)
