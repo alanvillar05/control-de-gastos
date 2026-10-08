@@ -11,6 +11,7 @@ App web para controlar ingresos, gastos y deudas desde el celular. Se instala co
 - **Ingresos y gastos** con categorías propias (nombre e ícono), que se crean desde el mismo formulario.
 - **Varias cuentas** (Mercado Pago, efectivo y las que agregues), con el saldo que deberías tener y pases de plata entre cuentas que no cuentan como ingreso ni como gasto.
 - **Control contra el saldo real:** ingresás cuánto tenés de verdad y la app te dice si falta o sobra plata, y te ayuda a anotar la diferencia.
+- **Ahorros:** metas con objetivo y fecha, plata que se guarda y se saca desde las cuentas, y cuánto falta por mes para llegar.
 - **Deudas:** lo que debés y lo que te deben, con pagos parciales y vencimientos. Si pusiste plata vos, se descuenta de la cuenta y vuelve a entrar al registrar el cobro.
 - **Resumen anual** mes a mes y por categoría, con **exportación a Excel** (las fórmulas se recalculan si editás la planilla).
 - **Copia de seguridad** en `.json`, restauración y botón de deshacer al borrar.
@@ -63,7 +64,7 @@ Y abrir http://localhost:8000.
 2. Se prueban en la beta. Lo que se anota ahí se guarda aparte, así que no toca los datos reales.
 3. Si está todo bien, se abre un *pull request* de `dev` a `main` y se acepta (*merge*). Esa es la versión que les llega a todos la próxima vez que abran la app con internet.
 
-Cada versión nueva sube el número de `VERSION` en `index.html` y agrega una entrada en `NOVEDADES`: la app se las muestra a cada persona una sola vez después de actualizar. Si se modifican `sw.js`, el manifest o los íconos, también hay que subir el número de `CACHE` en `sw.js` para que los celulares descarten la copia vieja.
+Cada versión nueva sube el número de `VERSION` en `index.html` y agrega una entrada en `NOVEDADES`: la app se las muestra a cada persona una sola vez después de actualizar. Si se modifican `sw.js`, el manifest o los íconos, también hay que subir `VERSION_CACHE` en `sw.js` para que los celulares descarten la copia vieja.
 
 > GitHub Pages tiene que estar configurado con **Settings › Pages › Source: GitHub Actions**.
 

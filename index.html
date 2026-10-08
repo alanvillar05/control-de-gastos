@@ -83,6 +83,7 @@ body{margin:0;background:var(--paper);color:var(--ink);font-family:"Atkinson Hyp
 .saldos{margin:14px 12px 0;}
 .saldos-cab{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px 4px;}
 .saldos-tit{margin:0;font-size:.9rem;color:var(--soft);}
+.saldos-ahorro{padding:0;font-size:.9rem;}
 .saldos-tit strong{color:var(--ink);font-family:var(--display);font-weight:600;font-variant-numeric:tabular-nums;}
 .saldos-fila{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;}
 .saldo{flex:1 1 140px;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;}
@@ -93,13 +94,32 @@ body{margin:0;background:var(--paper);color:var(--ink);font-family:"Atkinson Hyp
 .btn-pase{font:inherit;font-size:.9rem;font-weight:700;color:var(--blue);background:none;border:1.5px dashed var(--blue);border-radius:999px;padding:4px 12px;cursor:pointer;white-space:nowrap;}
 .btn-pase:hover{background:var(--blue-tint);}
 
-.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:14px;padding:0 12px;background:var(--paper);border-bottom:1px solid var(--line);}
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:14px;padding:0 12px;background:var(--paper);border-bottom:1px solid var(--line);}
 .tabs [role="tab"]{font:inherit;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-1px;color:var(--soft);padding:12px 4px 9px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0;}
 .tabs [role="tab"][aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink);}
 .tab-tit{font-weight:700;font-size:.98rem;}
+@media (max-width:420px){.tabs [role="tab"]{padding:12px 2px 9px;}.tab-tit{font-size:.86rem;}}
 .tab-sub{font-size:.8rem;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
 
 .panel{padding:16px 20px 0;}
+
+.beta-tag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:6px;background:var(--red-tint);color:var(--red);font-size:.75rem;font-weight:700;vertical-align:middle;letter-spacing:.02em;}
+.banner-update{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 12px 10px;padding:10px 12px 10px 16px;border-radius:12px;background:var(--blue-tint);font-size:.95rem;}
+
+.meta{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px;}
+.meta-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;}
+.meta-top h3{margin:0;font-size:1.05rem;overflow-wrap:anywhere;}
+.meta-top p{margin:2px 0 0;color:var(--soft);font-size:.92rem;}
+.meta-monto{text-align:right;flex:none;display:flex;flex-direction:column;}
+.meta-monto .num{font-family:var(--display);font-weight:700;font-size:1.25rem;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.meta-monto .sub{font-size:.85rem;color:var(--soft);white-space:nowrap;}
+.meta-info{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;}
+.barra.ahorro span{background:var(--blue);}
+.acciones{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
+
+.nov-tit{font-family:var(--display);font-size:1rem;margin:16px 0 6px;}
+.nov-lista{margin:0;padding-left:20px;}
+.nov-lista li{margin:4px 0;}
 .panel:focus{outline:none;}
 
 .btn{font:inherit;font-weight:700;border-radius:10px;padding:10px 16px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer;min-height:44px;}
@@ -321,6 +341,11 @@ input[type="date"].input{min-height:46px;}
     </div>
   </header>
 
+  <div class="banner-update" id="bannerUpdate" role="status" hidden>
+    <span>Hay una versión nueva de la app.</span>
+    <button class="btn btn-primary btn-chico" id="btnActualizar">Actualizar</button>
+  </div>
+
   <section class="hero" aria-labelledby="mesLabel">
     <div class="mes-nav">
       <button class="icon-btn" data-action="mes-prev" aria-label="Mes anterior">‹</button>
@@ -341,6 +366,7 @@ input[type="date"].input{min-height:46px;}
   <nav class="tabs" role="tablist" aria-label="Secciones" id="tabs">
     <button role="tab" id="tab-movs" data-action="tab" data-tab="movs" aria-controls="panel"><span class="tab-tit">Movimientos</span><span class="tab-sub" id="subMovs"></span></button>
     <button role="tab" id="tab-resumen" data-action="tab" data-tab="resumen" aria-controls="panel"><span class="tab-tit">Resumen</span><span class="tab-sub" id="subResumen"></span></button>
+    <button role="tab" id="tab-ahorros" data-action="tab" data-tab="ahorros" aria-controls="panel"><span class="tab-tit">Ahorros</span><span class="tab-sub c-ing" id="subAhorros"></span></button>
     <button role="tab" id="tab-deudas" data-action="tab" data-tab="deudas" aria-controls="panel"><span class="tab-tit">Deudas</span><span class="tab-sub" id="subDeudas"></span></button>
   </nav>
 
@@ -527,6 +553,7 @@ input[type="date"].input{min-height:46px;}
         <button class="menu-item" id="btnExportJson"><strong>Descargar copia de seguridad</strong><span>Un archivo .json con todo lo anotado.</span></button>
         <button class="menu-item" id="btnImport"><strong>Restaurar una copia</strong><span>Reemplaza lo anotado por el contenido de un .json descargado antes.</span></button>
         <input type="file" id="fileImport" accept=".json,application/json" hidden>
+        <button class="menu-item" id="menuNovedades"><strong>Novedades</strong><span id="menuVersionTxt"></span></button>
       </div>
       <p class="nota-chica" id="menuInfo"></p>
     </div>
@@ -549,6 +576,43 @@ input[type="date"].input{min-height:46px;}
       <span class="spacer"></span>
       <button class="btn btn-primary" id="btnCopiarLink">Copiar link</button>
     </footer>
+  </div>
+</dialog>
+
+<!-- Crear o editar una meta de ahorro -->
+<dialog id="dlgMeta" aria-labelledby="dlgMetaTit">
+  <div class="sheet">
+    <header class="sheet-head"><h2 id="dlgMetaTit">Nueva meta de ahorro</h2><button class="icon-btn" data-close aria-label="Cerrar">✕</button></header>
+    <div class="sheet-body">
+      <label class="field" style="margin-top:4px"><span class="field-label">¿Para qué ahorrás?</span><input id="metaNombre" class="input" maxlength="30" autocomplete="off" placeholder="Ej: Celular nuevo, Vacaciones, Imprevistos"></label>
+      <fieldset class="field"><legend class="field-label">Ícono</legend><div class="emojis" id="metaEmojis"></div></fieldset>
+      <label class="field"><span class="field-label">¿Cuánto querés juntar? (opcional)</span>
+        <span class="monto-wrap"><span aria-hidden="true">$</span><input id="metaObjetivo" inputmode="decimal" autocomplete="off" placeholder="0"></span>
+        <span class="field-hint" id="metaObjetivoHint"></span>
+      </label>
+      <label class="field"><span class="field-label">¿Para cuándo? (opcional)</span><input id="metaLimite" type="date" class="input"></label>
+      <label class="field"><span class="field-label">¿Ya tenés algo guardado aparte? (opcional)</span>
+        <span class="mini-monto"><span aria-hidden="true">$</span><input id="metaInicial" inputmode="decimal" autocomplete="off" placeholder="0"></span>
+        <span class="field-hint">Solo plata que no está en tus cuentas. Si está en Mercado Pago o en efectivo, creá la meta y después tocá "Guardar plata".</span>
+      </label>
+      <p class="aviso" id="metaAviso" hidden></p>
+      <p class="error" id="metaError" role="alert"></p>
+    </div>
+    <footer class="sheet-foot">
+      <button class="btn btn-ghost btn-peligro" id="metaArchivar" hidden>Archivar</button>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost" data-close>Cancelar</button>
+      <button class="btn btn-primary" id="metaGuardar" data-primary>Guardar</button>
+    </footer>
+  </div>
+</dialog>
+
+<!-- Novedades de la versión -->
+<dialog id="dlgNovedades" aria-labelledby="dlgNovTit">
+  <div class="sheet">
+    <header class="sheet-head"><h2 id="dlgNovTit">Novedades</h2><button class="icon-btn" data-close aria-label="Cerrar">✕</button></header>
+    <div class="sheet-body" id="novedadesBody"></div>
+    <footer class="sheet-foot"><span class="spacer"></span><button class="btn btn-primary" data-close>Entendido</button></footer>
   </div>
 </dialog>
 
@@ -593,6 +657,23 @@ const parseISO = iso => { const [y, m, d] = iso.split('-').map(Number); return n
 const sumarMes = (clave, delta) => { const [y, m] = clave.split('-').map(Number); const d = new Date(y, m - 1 + delta, 1); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; };
 const diasHasta = iso => Math.round((parseISO(iso) - parseISO(hoyISO())) / 86400000);
 const reFecha = /^\d{4}-\d{2}-\d{2}$/;
+
+// Versión de la app. Al publicar una nueva: subir el número y agregar arriba sus NOVEDADES.
+const VERSION = '1.1.0';
+const NOVEDADES = [
+  { version: '1.1.0', cambios: [
+    'Nueva pestaña Ahorros: creá metas, guardá plata desde tus cuentas y mirá cuánto te falta.',
+    'Novedades como estas, para que sepas qué cambió en cada versión (menú ⋯ › Novedades).',
+    'Aviso cuando hay una versión nueva, con un botón para actualizar.'
+  ] }
+];
+const versionMayor = (a, b) => {
+  const x = a.split('.').map(Number), y = b.split('.').map(Number);
+  for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0);
+  return false;
+};
+// Publicada en /beta/ es la versión de prueba: guarda sus datos aparte para no tocar los reales.
+const ES_BETA = /\/beta\/(index\.html)?$/.test(location.pathname);
 
 // Montos en centavos (enteros): así las sumas de plata son exactas.
 const fmtEntero = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -651,14 +732,18 @@ const ui = {
 let cargando = true;
 
 // Preferencias de este dispositivo (última cuenta usada): comodidad, no datos.
-const PREF_KEY = 'libreta-prefs';
+const PREF_KEY = ES_BETA ? 'libreta-beta-prefs' : 'libreta-prefs';
 let prefs = { bil: {}, pase: null };
 try { prefs = Object.assign(prefs, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch (_) {}
 const guardarPrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch (_) {} };
 
 const catsActivas = tipo => state.config.categorias.filter(c => c.tipo === tipo && !c.archivada).sort((a, b) => a.orden - b.orden);
 const getCat = id => state.config.categorias.find(c => c.id === id) || { id, nombre: 'Sin categoría', emoji: '❔', fantasma: true };
-const bilsActivas = () => state.config.billeteras.filter(b => !b.archivada);
+// Las metas de ahorro son "lugares" donde se aparta plata: se guardan junto a las cuentas con tipo 'ahorro',
+// así los pases, los saldos y el Excel las incluyen sin lógica aparte.
+const esAhorro = b => b.tipo === 'ahorro';
+const bilsActivas = () => state.config.billeteras.filter(b => !b.archivada && !esAhorro(b));
+const metasActivas = () => state.config.billeteras.filter(b => !b.archivada && esAhorro(b));
 const getBil = id => state.config.billeteras.find(b => b.id === id) || { id, nombre: 'Cuenta borrada', emoji: '❔', fantasma: true };
 const siguienteOrden = () => state.config.categorias.reduce((m, c) => Math.max(m, c.orden), -1) + 1;
 const bilPara = tipo => { const ids = bilsActivas().map(b => b.id); return ids.includes(prefs.bil[tipo]) ? prefs.bil[tipo] : ids[0]; };
@@ -760,10 +845,15 @@ function normalizarConfig(c) {
     .map(b => ({
       id: b.id, nombre: limpiarNombre(b.nombre) || 'Cuenta', emoji: typeof b.emoji === 'string' && b.emoji ? b.emoji.slice(0, 8) : '🏦',
       saldoInicial: Number.isInteger(b.saldoInicial) ? b.saldoInicial : 0, archivada: !!b.archivada,
-      control: b.control && reFecha.test(b.control.fecha) && Number.isInteger(b.control.dif) ? { fecha: b.control.fecha, dif: b.control.dif } : null
+      control: b.control && reFecha.test(b.control.fecha) && Number.isInteger(b.control.dif) ? { fecha: b.control.fecha, dif: b.control.dif } : null,
+      ...(b.tipo === 'ahorro' ? {
+        tipo: 'ahorro',
+        objetivo: Number.isInteger(b.objetivo) && b.objetivo > 0 ? b.objetivo : null,
+        limite: reFecha.test(b.limite || '') ? b.limite : null
+      } : {})
     }));
-  if (!bils.length) bils = configInicial().billeteras;
-  if (!bils.some(b => !b.archivada)) bils[0].archivada = false;
+  if (!bils.some(b => !esAhorro(b))) bils.unshift(...configInicial().billeteras);
+  if (!bils.some(b => !b.archivada && !esAhorro(b))) bils.find(b => !esAhorro(b)).archivada = false;
   return { version: 2, inicioHecho: !!c.inicioHecho, categorias: cats, billeteras: bils };
 }
 
@@ -782,7 +872,7 @@ function validarCopia(d) {
    Nube: un documento por mes ("m-2026-10"), uno de deudas ("cuentas", nombre heredado)
    y uno de configuración ("config"), en el espacio privado del usuario.
    Si no hay nube, localStorage. */
-const LS_KEY = 'libreta-cuentas-v1';
+const LS_KEY = ES_BETA ? 'libreta-beta-cuentas-v1' : 'libreta-cuentas-v1';
 const LINK_ARTEFACTO = ''; // solo se usa dentro de Claude
 const enClaude = () => !!(window.claude && typeof window.claude.use === 'function');
 const linkApp = () => (enClaude() ? LINK_ARTEFACTO : location.href.split(/[?#]/)[0]);
@@ -980,14 +1070,14 @@ function restaurar(foto) {
 }
 
 /* ================= Render ================= */
-function listo() { cargando = false; migrar(); render(); }
+function listo() { cargando = false; migrar(); render(); revisarNovedades(); }
 
 function render() {
   pintarEstado(); pintarHero(); pintarSaldos(); pintarTabs();
   const panel = $('#panel');
   panel.setAttribute('aria-labelledby', 'tab-' + ui.tab);
   if (cargando) { if (!panel.innerHTML) panel.innerHTML = '<p class="cargando">Abriendo tu libreta…</p>'; return; }
-  panel.innerHTML = ui.tab === 'movs' ? htmlMovimientos() : ui.tab === 'resumen' ? htmlResumen() : htmlDeudas();
+  panel.innerHTML = ui.tab === 'movs' ? htmlMovimientos() : ui.tab === 'resumen' ? htmlResumen() : ui.tab === 'ahorros' ? htmlAhorros() : htmlDeudas();
   if ($('#dlgCats').open) pintarCats();
 }
 
@@ -1016,7 +1106,9 @@ function pintarSaldos() {
   if (cargando) { box.innerHTML = ''; return; }
   const saldos = calcularSaldos(), bils = bilsActivas();
   const total = bils.reduce((s, b) => s + saldos.get(b.id), 0);
-  box.innerHTML = `<div class="saldos-cab"><p class="saldos-tit">Deberías tener hoy <strong>${conSigno(total)}</strong></p>
+  const ahorrado = metasActivas().reduce((s, b) => s + saldos.get(b.id), 0);
+  box.innerHTML = `<div class="saldos-cab"><p class="saldos-tit">Deberías tener hoy <strong>${conSigno(total)}</strong>${ahorrado
+      ? `<br><button class="link saldos-ahorro" data-action="tab" data-tab="ahorros">y ${money(ahorrado)} en ahorros</button>` : ''}</p>
     ${bils.length > 1 ? '<button class="btn-pase" data-action="nuevo-pase">⇄ Pasar plata</button>' : ''}</div>
     <div class="saldos-fila">${bils.map(b => {
       const v = saldos.get(b.id);
@@ -1029,7 +1121,7 @@ function pintarSaldos() {
 }
 
 function pintarTabs() {
-  for (const t of ['movs', 'resumen', 'deudas']) {
+  for (const t of ['movs', 'resumen', 'ahorros', 'deudas']) {
     const b = $('#tab-' + t), sel = ui.tab === t;
     b.setAttribute('aria-selected', String(sel)); b.tabIndex = sel ? 0 : -1;
   }
@@ -1039,6 +1131,8 @@ function pintarTabs() {
   $('#subMovs').textContent = n === 1 ? '1 anotado' : `${n} anotados`;
   $('#subResumen').textContent = `Año ${ui.tab === 'resumen' ? ui.anio : ui.mes.slice(0, 4)}`;
   $('#subDeudas').textContent = pend ? `${pend} ${pend === 1 ? 'pendiente' : 'pendientes'}` : 'Al día';
+  const saldos = calcularSaldos(), metas = metasActivas();
+  $('#subAhorros').textContent = metas.length ? money(metas.reduce((s, b) => s + saldos.get(b.id), 0)) : 'Sin metas';
 }
 
 function etiquetaDia(iso) {
@@ -1087,8 +1181,10 @@ function htmlMovimientos() {
 function htmlFilaMov(m) {
   const attrs = `data-action="edit-mov" data-id="${esc(m.id)}" data-mes="${mesDe(m.fecha)}"`;
   if (m.tipo === 'pase') {
-    return `<li><button class="mov" ${attrs}><span class="mov-ico" aria-hidden="true">⇄</span>
-      <span class="mov-txt"><span class="mov-cat">Pasaste plata</span><span class="mov-nota">${esc(getBil(m.desde).nombre)} → ${esc(getBil(m.hacia).nombre)}${m.nota ? `, ${esc(m.nota)}` : ''}</span></span>
+    const d = getBil(m.desde), h = getBil(m.hacia);
+    const [ico, tit] = esAhorro(h) ? [h.emoji, `Guardaste en ${h.nombre}`] : esAhorro(d) ? [d.emoji, `Sacaste de ${d.nombre}`] : ['⇄', 'Pasaste plata'];
+    return `<li><button class="mov" ${attrs}><span class="mov-ico" aria-hidden="true">${esc(ico)}</span>
+      <span class="mov-txt"><span class="mov-cat">${esc(tit)}</span><span class="mov-nota">${esc(d.nombre)} → ${esc(h.nombre)}${m.nota ? `, ${esc(m.nota)}` : ''}</span></span>
       <span class="mov-der"><span class="mov-monto">${money(m.monto)}</span></span></button></li>`;
   }
   const c = getCat(m.cat), esGasto = m.tipo === 'gasto';
@@ -1135,6 +1231,63 @@ function htmlResumen() {
   if (gas) h += `<h3 class="h-sec">Gastos por categoría</h3>${htmlBarras(porCat.gasto, gas, 'gasto')}`;
   if (ing) h += `<h3 class="h-sec">Ingresos por categoría</h3>${htmlBarras(porCat.ingreso, ing, 'ingreso')}`;
   return h;
+}
+
+function htmlAhorros() {
+  const saldos = calcularSaldos(), metas = metasActivas();
+  const total = metas.reduce((s, b) => s + saldos.get(b.id), 0);
+  // Neto del mes: lo que se guardó menos lo que se sacó de las metas.
+  let delMes = 0;
+  for (const m of state.months[mesDe(hoyISO())] || []) {
+    if (m.tipo !== 'pase') continue;
+    const aMeta = esAhorro(getBil(m.hacia)), deMeta = esAhorro(getBil(m.desde));
+    if (aMeta && !deMeta) delMes += m.monto;
+    else if (deMeta && !aMeta) delMes -= m.monto;
+  }
+  let h = `<div class="cuentas-head">
+      <div><p class="soft-p">Tenés ahorrado</p><p class="cuentas-total c-ing">${money(total)}</p>
+      ${delMes ? `<p class="soft-p">${delMes > 0 ? `Este mes guardaste ${money(delMes)}` : `Este mes sacaste ${money(-delMes)}`}</p>` : ''}</div>
+      <button class="btn btn-primary" data-action="nueva-meta">+ Nueva meta</button></div>`;
+  if (!metas.length) {
+    h += `<div class="vacio"><strong>Todavía no tenés metas</strong>Creá una para lo que quieras juntar (un celular, las vacaciones o un fondo para imprevistos) y guardá plata de a poco desde tus cuentas. Lo que guardás deja de contarse como plata disponible para gastar.</div>`;
+  } else h += metas.map(b => htmlMeta(b, saldos.get(b.id))).join('');
+  const archivadas = state.config.billeteras.filter(b => b.archivada && esAhorro(b));
+  if (archivadas.length) {
+    h += `<p class="sub-tit">Metas archivadas</p><ul class="cat-admin">${archivadas.map(b =>
+      `<li class="cat-admin-arch"><span class="emo" aria-hidden="true">${esc(b.emoji)}</span><span class="nom">${esc(b.nombre)}</span><button class="link" data-action="meta-recuperar" data-id="${esc(b.id)}">Recuperar</button></li>`).join('')}</ul>`;
+  }
+  return h;
+}
+
+function htmlMeta(b, saldo) {
+  const id = esc(b.id), obj = b.objetivo || 0;
+  const pct = obj ? Math.min(100, Math.max(0, Math.round(saldo / obj * 100))) : 0;
+  const info = [];
+  if (obj && saldo >= obj) info.push('<span class="badge ok">¡Meta cumplida!</span>');
+  else if (obj) {
+    const falta = obj - saldo, dias = b.limite ? diasHasta(b.limite) : null;
+    const fecha = b.limite ? fmtCorta.format(parseISO(b.limite)) : '';
+    if (dias === null) info.push(`<span class="badge">Faltan ${money(falta)}</span>`);
+    else if (dias < 0) info.push(`<span class="badge alerta">Faltan ${money(falta)} y ya pasó el ${fecha}</span>`);
+    else if (dias < 31) info.push(`<span class="badge">Faltan ${money(falta)} para el ${fecha}</span>`);
+    else {
+      const meses = Math.ceil(dias / 30.44), porMes = Math.ceil(falta / meses / 100) * 100;
+      info.push(`<span class="badge">Faltan ${money(falta)}: unos ${money(porMes)} por mes hasta el ${fecha}</span>`);
+    }
+  } else if (b.limite) info.push(`<span class="badge">Para el ${fmtCorta.format(parseISO(b.limite))}</span>`);
+  return `<article class="meta">
+    <div class="meta-top">
+      <div style="min-width:0"><h3>${esc(b.emoji)} ${esc(b.nombre)}</h3>${obj ? `<p>Meta: ${money(obj)}</p>` : ''}</div>
+      <div class="meta-monto"><span class="num ${saldo < 0 ? 'c-gas' : 'c-ing'}">${conSigno(saldo)}</span>${obj ? `<span class="sub">${pct}%</span>` : ''}</div>
+    </div>
+    ${obj ? `<div class="barra ahorro" role="progressbar" aria-label="Avance de ${esc(b.nombre)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><span style="width:${pct}%"></span></div>` : ''}
+    ${info.length ? `<div class="meta-info">${info.join('')}</div>` : ''}
+    <div class="acciones">
+      <button class="btn btn-chico btn-primary" data-action="meta-guardar" data-id="${id}">Guardar plata</button>
+      ${saldo > 0 ? `<button class="btn btn-chico btn-plain" data-action="meta-sacar" data-id="${id}">Sacar</button>` : ''}
+      <button class="btn btn-chico btn-ghost" data-action="meta-editar" data-id="${id}">Editar</button>
+    </div>
+  </article>`;
 }
 
 function ordenPendientes(a, b) {
@@ -1256,9 +1409,9 @@ function confirmar({ titulo, texto: txt, ok }) {
   });
 }
 
-// Chips de cuentas; incluye una archivada si es la que ya estaba elegida.
-function chipsBil(name, sel) {
-  const lista = bilsActivas();
+// Chips de cuentas (y de metas, para los pases); incluye una archivada si es la que ya estaba elegida.
+function chipsBil(name, sel, conMetas = false) {
+  const lista = conMetas ? [...bilsActivas(), ...metasActivas()] : bilsActivas();
   if (sel && !lista.some(b => b.id === sel)) { const b = state.config.billeteras.find(x => x.id === sel); if (b) lista.push(b); }
   return lista.map(b => `<label class="chip"><input type="radio" name="${name}" value="${esc(b.id)}"${b.id === sel ? ' checked' : ''}><span>${esc(b.emoji)} ${esc(b.nombre)}</span></label>`).join('');
 }
@@ -1285,15 +1438,15 @@ function setTipoMov(tipo, sel = {}) {
   $('#movPaseCampos').hidden = !esPase;
   if (esPase) {
     const def = paseDefecto();
-    $('#movDesde').innerHTML = chipsBil('movDesde', sel.desde || def.desde);
-    $('#movHacia').innerHTML = chipsBil('movHacia', sel.hacia || def.hacia);
+    $('#movDesde').innerHTML = chipsBil('movDesde', sel.desde || def.desde, true);
+    $('#movHacia').innerHTML = chipsBil('movHacia', sel.hacia || def.hacia, true);
   } else {
     $('#movBilLbl').textContent = tipo === 'gasto' ? '¿Con qué pagaste?' : '¿Dónde entró la plata?';
     $('#movBils').innerHTML = chipsBil('movBil', sel.bil || bilPara(tipo));
     pintarCatsMov(tipo, sel.cat);
   }
   const nombres = { gasto: 'gasto', ingreso: 'ingreso', pase: 'pase entre cuentas' };
-  $('#dlgMovTit').textContent = movCtx ? `Editar ${nombres[tipo]}` : esPase ? 'Pasar plata' : `Nuevo ${tipo}`;
+  $('#dlgMovTit').textContent = movCtx ? `Editar ${nombres[tipo]}` : esPase ? (sel.titulo || 'Pasar plata') : `Nuevo ${tipo}`;
 }
 
 dlgMov.addEventListener('change', e => {
@@ -1303,7 +1456,7 @@ dlgMov.addEventListener('change', e => {
     // Con dos cuentas, elegir una en un lado elige la otra del otro lado.
     const otro = t.name === 'movDesde' ? 'movHacia' : 'movDesde';
     if (elegido(dlgMov, otro) === t.value) {
-      const alt = bilsActivas().find(b => b.id !== t.value);
+      const alt = [...bilsActivas(), ...metasActivas()].find(b => b.id !== t.value);
       const r = alt && dlgMov.querySelector(`input[name="${otro}"][value="${CSS.escape(alt.id)}"]`);
       if (r) r.checked = true;
     }
@@ -1317,7 +1470,7 @@ dlgMov.addEventListener('click', e => {
 
 function abrirMov(tipo, mov, preset = {}) {
   movCtx = mov ? { id: mov.id, mesOriginal: mesDe(mov.fecha), creado: mov.creado, deudaId: mov.deudaId || null } : null;
-  $('#segPase').hidden = bilsActivas().length < 2 && !(mov && mov.tipo === 'pase');
+  $('#segPase').hidden = bilsActivas().length + metasActivas().length < 2 && !(mov && mov.tipo === 'pase');
   setTipoMov(mov ? mov.tipo : tipo, mov ? { cat: mov.cat, bil: mov.bil, desde: mov.desde, hacia: mov.hacia } : preset);
   $('#movMonto').value = mov ? centsAInput(mov.monto) : preset.monto ? centsAInput(preset.monto) : '';
   $('#movNota').value = mov ? (mov.nota || '') : '';
@@ -1341,7 +1494,11 @@ $('#movGuardar').addEventListener('click', () => {
     const desde = elegido(dlgMov, 'movDesde'), hacia = elegido(dlgMov, 'movHacia');
     if (!desde || !hacia) error = 'Elegí de qué cuenta sale y a cuál entra.';
     else if (desde === hacia) error = 'La plata tiene que pasar entre dos cuentas distintas.';
-    else { mov = { ...base, desde, hacia }; prefs.pase = { desde, hacia }; }
+    else if (!movCtx && esAhorro(getBil(desde)) && monto > calcularSaldos().get(desde)) error = `En ${getBil(desde).nombre} hay ${money(Math.max(0, calcularSaldos().get(desde)))}.`;
+    else {
+      mov = { ...base, desde, hacia };
+      if (!esAhorro(getBil(desde)) && !esAhorro(getBil(hacia))) prefs.pase = { desde, hacia };
+    }
   } else if (!error) {
     const bil = elegido(dlgMov, 'movBil'), cat = elegido(dlgMov, 'movCat');
     if (!bil) error = tipo === 'gasto' ? 'Elegí con qué pagaste.' : 'Elegí dónde entró la plata.';
@@ -1353,9 +1510,12 @@ $('#movGuardar').addEventListener('click', () => {
   const editando = !!movCtx;
   guardarMovimiento(mov, movCtx?.mesOriginal);
   dlgMov.close();
-  ui.mes = mesDe(fecha); ui.tab = 'movs';
+  ui.mes = mesDe(fecha);
+  if (ui.tab !== 'ahorros') ui.tab = 'movs';
   render();
-  toast(editando ? 'Cambios guardados.' : { gasto: 'Gasto anotado.', ingreso: 'Ingreso anotado.', pase: 'Pase anotado.' }[tipo]);
+  const textoPase = m => esAhorro(getBil(m.hacia)) ? `Guardado en ${getBil(m.hacia).nombre}.`
+    : esAhorro(getBil(m.desde)) ? `Sacaste plata de ${getBil(m.desde).nombre}.` : 'Pase anotado.';
+  toast(editando ? 'Cambios guardados.' : tipo === 'pase' ? textoPase(mov) : { gasto: 'Gasto anotado.', ingreso: 'Ingreso anotado.' }[tipo]);
 });
 
 $('#movBorrar').addEventListener('click', () => {
@@ -1465,7 +1625,7 @@ function pintarBils() {
       <span class="mini-monto"><span aria-hidden="true">$</span><input class="bil-inicial" inputmode="decimal" value="${esc(b.inicial)}" aria-label="Saldo inicial de ${esc(b.nombre || 'la cuenta nueva')}"></span>
       ${bilsBorrador.length > 1 ? `<button class="icon-btn" data-quitar="${esc(b.id)}" aria-label="Quitar ${esc(b.nombre || 'la cuenta')}">✕</button>` : '<span></span>'}
     </div>`).join('');
-  const archivadas = state.config.billeteras.filter(b => b.archivada && !bilsBorrador.some(x => x.id === b.id));
+  const archivadas = state.config.billeteras.filter(b => b.archivada && !esAhorro(b) && !bilsBorrador.some(x => x.id === b.id));
   $('#bilsArchivadas').innerHTML = archivadas.length ? `<p class="sub-tit">Archivadas (conservan sus movimientos)</p><ul class="cat-admin">${archivadas.map(b =>
     `<li class="cat-admin-arch"><span class="emo" aria-hidden="true">${esc(b.emoji)}</span><span class="nom">${esc(b.nombre)}</span><button class="link" data-recuperar="${esc(b.id)}">Recuperar</button></li>`).join('')}</ul>` : '';
 }
@@ -1500,13 +1660,15 @@ $('#bilsGuardar').addEventListener('click', () => {
     if (!Number.isFinite(inicial)) return fallar(`Revisá el saldo inicial de ${nombre}.`);
     limpias.push({ ...b, nombre, inicial });
   }
-  const archivadaIgual = state.config.billeteras.find(a => a.archivada && !limpias.some(x => x.id === a.id) && vistos.has(a.nombre.toLowerCase()));
+  const metaIgual = state.config.billeteras.find(a => esAhorro(a) && vistos.has(a.nombre.toLowerCase()));
+  if (metaIgual) return fallar(`Ya tenés una meta de ahorro llamada "${metaIgual.nombre}".`);
+  const archivadaIgual = state.config.billeteras.find(a => a.archivada && !esAhorro(a) && !limpias.some(x => x.id === a.id) && vistos.has(a.nombre.toLowerCase()));
   if (archivadaIgual) return fallar(`Ya tenés "${archivadaIgual.nombre}" archivada. Recuperala desde "Archivadas", más abajo.`);
   const foto = capturar(), quitadas = [];
   // Las cuentas quitadas con movimientos se archivan (no se pierde historial); las que no se usaron se borran.
   const usos = contarUsos();
   state.config.billeteras = state.config.billeteras.filter(b => {
-    if (b.archivada || limpias.some(x => x.id === b.id)) return true;
+    if (esAhorro(b) || b.archivada || limpias.some(x => x.id === b.id)) return true;
     quitadas.push(b.nombre);
     if (usos.get(b.id)) { b.archivada = true; return true; }
     return false;
@@ -1594,6 +1756,104 @@ $('#bilVerMovs').addEventListener('click', () => {
   dlgBil.close(); render();
   $('#tabs').scrollIntoView({ block: 'start' });
 });
+
+/* ================= Diálogo: meta de ahorro ================= */
+const dlgMeta = $('#dlgMeta');
+const EMOJIS_META = ['🎯', '🐷', '📱', '💻', '✈️', '🏖️', '🏍️', '🚗', '🏠', '🎓', '🎁', '🛟', '🔧', '❄️', '🎮', '💍'];
+const hintMetaObj = conectarHint('#metaObjetivo', '#metaObjetivoHint');
+let metaCtx = null;
+
+function abrirMeta(b) {
+  metaCtx = b ? b.id : null;
+  $('#dlgMetaTit').textContent = b ? 'Editar meta' : 'Nueva meta de ahorro';
+  $('#metaNombre').value = b ? b.nombre : '';
+  const actual = b ? b.emoji : '🎯';
+  const lista = EMOJIS_META.includes(actual) ? EMOJIS_META : [actual, ...EMOJIS_META];
+  $('#metaEmojis').innerHTML = lista.map(e => `<label class="emoji"><input type="radio" name="metaEmoji" value="${esc(e)}"${e === actual ? ' checked' : ''}><span>${esc(e)}</span></label>`).join('');
+  $('#metaObjetivo').value = b && b.objetivo ? centsAInput(b.objetivo) : '';
+  $('#metaLimite').value = b && b.limite ? b.limite : '';
+  $('#metaInicial').value = b && b.saldoInicial ? centsAInput(b.saldoInicial) : '';
+  // Solo se archiva o borra una meta vacía, para que nunca quede plata escondida.
+  const saldo = b ? calcularSaldos().get(b.id) : 0, usos = b ? (contarUsos().get(b.id) || 0) : 0;
+  const btn = $('#metaArchivar');
+  btn.hidden = !b || saldo !== 0;
+  btn.textContent = usos ? 'Archivar' : 'Borrar';
+  btn.dataset.modo = usos ? 'archivar' : 'borrar';
+  $('#metaAviso').hidden = !b || saldo === 0;
+  $('#metaAviso').textContent = saldo > 0 ? `Tiene ${money(saldo)}. Para archivarla, primero sacá esa plata con "Sacar".` : 'El saldo de esta meta es negativo: revisá sus movimientos.';
+  $('#metaError').textContent = '';
+  hintMetaObj();
+  dlgMeta.showModal();
+  if (!b) $('#metaNombre').focus();
+}
+
+$('#metaGuardar').addEventListener('click', () => {
+  const nombre = limpiarNombre($('#metaNombre').value);
+  const emoji = elegido(dlgMeta, 'metaEmoji') || '🎯';
+  const objTxt = $('#metaObjetivo').value.trim(), iniTxt = $('#metaInicial').value.trim();
+  const objetivo = objTxt ? parseMonto(objTxt) : null;
+  const inicial = iniTxt ? parseMontoOCero(iniTxt) : 0;
+  const limite = $('#metaLimite').value || null;
+  const dup = nombre && state.config.billeteras.find(x => x.id !== metaCtx && x.nombre.toLowerCase() === nombre.toLowerCase());
+  const error = !nombre ? 'Escribí para qué estás ahorrando.'
+    : dup ? (esAhorro(dup) ? `Ya tenés una meta llamada "${dup.nombre}"${dup.archivada ? ' (archivada)' : ''}.` : `Ya tenés una cuenta llamada "${dup.nombre}".`)
+    : objTxt && !Number.isFinite(objetivo) ? 'Revisá el monto que querés juntar.'
+    : !Number.isFinite(inicial) ? 'Revisá el monto que ya tenés guardado.'
+    : limite && !reFecha.test(limite) ? 'Revisá la fecha.' : '';
+  if (error) { $('#metaError').textContent = error; return; }
+  const existente = metaCtx ? state.config.billeteras.find(x => x.id === metaCtx) : null;
+  const datos = { nombre, emoji, objetivo, limite, saldoInicial: inicial };
+  if (existente) Object.assign(existente, datos);
+  else state.config.billeteras.push({ id: nuevoId(), tipo: 'ahorro', ...datos, archivada: false, control: null });
+  Store.cambio('config');
+  dlgMeta.close();
+  ui.tab = 'ahorros'; render();
+  toast(existente ? 'Meta actualizada.' : `Meta "${nombre}" creada.`);
+});
+
+$('#metaArchivar').addEventListener('click', () => {
+  const b = state.config.billeteras.find(x => x.id === metaCtx);
+  if (!b) return;
+  const foto = capturar(), borrar = $('#metaArchivar').dataset.modo === 'borrar';
+  if (borrar) state.config.billeteras = state.config.billeteras.filter(x => x.id !== b.id);
+  else b.archivada = true;
+  Store.cambio('config');
+  dlgMeta.close(); render();
+  toast(borrar ? 'Meta borrada.' : 'Meta archivada. Su historial se mantiene.', foto);
+});
+
+/* ================= Versión, novedades y actualizaciones ================= */
+function abrirNovedades(desde) {
+  const lista = NOVEDADES.filter(n => !desde || versionMayor(n.version, desde));
+  $('#dlgNovTit').textContent = desde ? '¡La app se actualizó!' : 'Novedades';
+  $('#novedadesBody').innerHTML = `<p class="soft-p">Estás usando la versión ${esc(VERSION)}${ES_BETA ? ' (beta)' : ''}.</p>`
+    + lista.map(n => `<h3 class="nov-tit">Versión ${esc(n.version)}</h3><ul class="nov-lista">${n.cambios.map(c => `<li>${esc(c)}</li>`).join('')}</ul>`).join('');
+  $('#dlgNovedades').showModal();
+}
+
+// Después de una actualización muestra lo nuevo una sola vez. A quien recién empieza no le muestra nada.
+function revisarNovedades() {
+  const tieneDatos = state.config.inicioHecho || Object.values(state.months).some(a => a.length);
+  const anterior = prefs.versionVista || (tieneDatos ? '1.0.0' : null); // 1.0.0 no guardaba la versión vista
+  prefs.versionVista = VERSION; guardarPrefs();
+  if (anterior && versionMayor(VERSION, anterior)) abrirNovedades(anterior);
+}
+
+// Con la app abierta (o en segundo plano) no se recarga sola: al volver a mirarla se fija si hay
+// una versión publicada más nueva. version.json lo genera el workflow al publicar.
+let ultimaRevision = Date.now();
+async function buscarActualizacion() {
+  if (enClaude() || !/^https?:$/.test(location.protocol) || Date.now() - ultimaRevision < 30 * 60000) return;
+  ultimaRevision = Date.now();
+  try {
+    const r = await fetch('version.json', { cache: 'no-store' });
+    if (!r.ok) return;
+    const { version } = await r.json();
+    if (typeof version === 'string' && versionMayor(version, VERSION)) $('#bannerUpdate').hidden = false;
+  } catch (_) {}
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') buscarActualizacion(); });
+$('#btnActualizar').addEventListener('click', () => location.reload());
 
 /* ================= Diálogo: deuda ================= */
 const dlgDeuda = $('#dlgDeuda');
@@ -1894,7 +2154,7 @@ async function armarLibro(anio) {
   bilsHoja.forEach((b, idx) => {
     const r = 5 + idx, x = porBil.get(b.id), saldo = (b.saldoInicial || 0) + x.ent - x.sal + x.pases;
     totalSaldos += saldo;
-    put(wsS, r, 1, b.nombre + (b.archivada ? ' (archivada)' : ''));
+    put(wsS, r, 1, b.nombre + (esAhorro(b) ? ' (ahorro)' : '') + (b.archivada ? ' (archivada)' : ''));
     put(wsS, r, 2, (b.saldoInicial || 0) / 100, { fmt: MONEDA });
     put(wsS, r, 3, x.ent / 100, { fmt: MONEDA });
     put(wsS, r, 4, x.sal / 100, { fmt: MONEDA });
@@ -1950,6 +2210,8 @@ function abrirMenu() {
     : Store.modo === 'local' ? 'Lo que anotás se guarda solo en este navegador. Si borrás los datos del navegador se pierde, así que descargá una copia de vez en cuando.'
     : Store.modo === 'memoria' ? 'Este navegador no permite guardar. Descargá una copia antes de cerrar la página.'
     : 'Abriendo tu libreta…';
+  if (ES_BETA) $('#menuInfo').textContent += ' Esta es la versión de prueba: lo que anotes acá está separado de tu libreta normal.';
+  $('#menuVersionTxt').textContent = `Versión ${VERSION}${ES_BETA ? ' (beta)' : ''}: qué cambió en cada actualización.`;
   $('#menuExcelTit').textContent = `Resumen ${ui.tab === 'resumen' ? ui.anio : ui.mes.slice(0, 4)} en Excel`;
   $('#dlgMenu').showModal();
 }
@@ -1978,6 +2240,7 @@ $('#btnEnviarLink').addEventListener('click', async () => {
 });
 $('#linkApp').addEventListener('focus', e => e.target.select());
 
+$('#menuNovedades').addEventListener('click', () => { $('#dlgMenu').close(); abrirNovedades(null); });
 $('#menuCats').addEventListener('click', () => { if (cargando) return; $('#dlgMenu').close(); abrirCats('gasto'); });
 $('#menuBils').addEventListener('click', () => { if (cargando) return; $('#dlgMenu').close(); abrirBils(); });
 $('#menuExcel').addEventListener('click', () => {
@@ -2035,6 +2298,11 @@ document.addEventListener('click', e => {
       break;
     }
     case 'ver-bil': abrirBil(b.dataset.id); break;
+    case 'nueva-meta': abrirMeta(null); break;
+    case 'meta-editar': { const m = getBil(b.dataset.id); if (!m.fantasma) abrirMeta(m); break; }
+    case 'meta-guardar': { const m = getBil(b.dataset.id); abrirMov('pase', null, { desde: bilPara('gasto'), hacia: m.id, titulo: `Guardar en ${m.nombre}` }); break; }
+    case 'meta-sacar': { const m = getBil(b.dataset.id); abrirMov('pase', null, { desde: m.id, hacia: bilPara('ingreso'), titulo: `Sacar de ${m.nombre}` }); break; }
+    case 'meta-recuperar': { const m = state.config.billeteras.find(x => x.id === b.dataset.id); if (m) { m.archivada = false; Store.cambio('config'); render(); } break; }
     case 'inicio-cargar': abrirBils(); break;
     case 'inicio-omitir': state.config.inicioHecho = true; Store.cambio('config'); render(); break;
     case 'anio-prev': ui.anio--; render(); break;
@@ -2080,14 +2348,18 @@ document.addEventListener('toggle', e => {
 
 // Navegación con flechas entre pestañas.
 $('#tabs').addEventListener('keydown', e => {
-  const orden = ['movs', 'resumen', 'deudas'], i = orden.indexOf(ui.tab);
-  const destino = { ArrowRight: (i + 1) % 3, ArrowLeft: (i + 2) % 3, Home: 0, End: 2 }[e.key];
+  const orden = ['movs', 'resumen', 'ahorros', 'deudas'], i = orden.indexOf(ui.tab), n = orden.length;
+  const destino = { ArrowRight: (i + 1) % n, ArrowLeft: (i + n - 1) % n, Home: 0, End: n - 1 }[e.key];
   if (destino === undefined) return;
   e.preventDefault();
   if (orden[destino] === 'resumen' && ui.tab !== 'resumen') ui.anio = Number(ui.mes.slice(0, 4));
   ui.tab = orden[destino]; render(); $('#tab-' + ui.tab).focus();
 });
 
+if (ES_BETA) {
+  document.title += ' (beta)';
+  $('.marca').insertAdjacentHTML('beforeend', ' <span class="beta-tag">beta</span>');
+}
 render();
 Store.iniciar();
 if ('serviceWorker' in navigator && !enClaude() && document.querySelector('link[rel="manifest"]')
