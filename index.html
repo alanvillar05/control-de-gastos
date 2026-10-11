@@ -323,10 +323,20 @@ input[type="date"].input{min-height:46px;}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:50;display:flex;align-items:center;gap:16px;background:var(--ink);color:var(--paper);padding:12px 16px;border-radius:12px;box-shadow:var(--shadow);width:max-content;max-width:calc(100% - 32px);font-size:.95rem;}
 .toast .link{color:var(--toast-link);font-weight:700;flex:none;}
 
+.par-btns.con-voz{grid-template-columns:1fr 1fr 54px;}
+.btn-voz{padding:0;font-size:1.35rem;}
+.voz-aviso{margin:0 0 14px;}
+.voz-body{text-align:center;}
+.voz-mic{width:88px;height:88px;margin:14px auto 10px;border-radius:50%;display:grid;place-items:center;font-size:2.3rem;background:var(--blue-tint);}
+.voz-estado{font-weight:700;margin:0;}
+.voz-texto{font-family:var(--display);font-weight:600;font-size:1.25rem;min-height:1.6em;margin:8px 0 14px;overflow-wrap:anywhere;}
+
 @media (prefers-reduced-motion:no-preference){
+  .voz-mic.activo{animation:latido 1.3s ease-out infinite;}
   .toast:not([hidden]){animation:aparecer .2s ease-out;}
   dialog[open]{animation:subir .22s ease-out;}
 }
+@keyframes latido{from{box-shadow:0 0 0 0 rgba(39,71,181,.4);}to{box-shadow:0 0 0 22px rgba(39,71,181,0);}}
 @keyframes aparecer{from{opacity:0;transform:translate(-50%,8px);}to{opacity:1;transform:translate(-50%,0);}}
 @keyframes subir{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
 </style>
@@ -378,6 +388,7 @@ input[type="date"].input{min-height:46px;}
   <div class="sheet">
     <header class="sheet-head"><h2 id="dlgMovTit">Nuevo gasto</h2><button class="icon-btn" data-close aria-label="Cerrar">✕</button></header>
     <div class="sheet-body">
+      <p class="aviso voz-aviso" id="movVoz" hidden></p>
       <div class="seg" role="radiogroup" aria-label="Tipo de movimiento">
         <label><input type="radio" name="movTipo" value="gasto"><span>Gasto</span></label>
         <label><input type="radio" name="movTipo" value="ingreso"><span>Ingreso</span></label>
@@ -405,6 +416,24 @@ input[type="date"].input{min-height:46px;}
       <span class="spacer"></span>
       <button class="btn btn-ghost" data-close>Cancelar</button>
       <button class="btn btn-primary" id="movGuardar" data-primary>Guardar</button>
+    </footer>
+  </div>
+</dialog>
+
+<!-- Anotar hablando -->
+<dialog id="dlgVoz" aria-labelledby="dlgVozTit">
+  <div class="sheet">
+    <header class="sheet-head"><h2 id="dlgVozTit">Decí qué pasó</h2><button class="icon-btn" data-close aria-label="Cerrar">✕</button></header>
+    <div class="sheet-body voz-body">
+      <div class="voz-mic" id="vozMic" aria-hidden="true">🎤</div>
+      <p class="voz-estado" id="vozEstado" role="status">Escuchando…</p>
+      <p class="voz-texto" id="vozTexto" aria-live="polite"></p>
+      <p class="soft-p">Por ejemplo: «gasté 2500 de nafta con Mercado Pago», «cobré 80 lucas de sueldo» o «ayer pagué la luz 15 mil en efectivo».</p>
+    </div>
+    <footer class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn btn-ghost" data-close>Cancelar</button>
+      <button class="btn btn-primary" id="vozReintentar" hidden>Probar de nuevo</button>
     </footer>
   </div>
 </dialog>
@@ -659,8 +688,11 @@ const diasHasta = iso => Math.round((parseISO(iso) - parseISO(hoyISO())) / 86400
 const reFecha = /^\d{4}-\d{2}-\d{2}$/;
 
 // Versión de la app. Al publicar una nueva: subir el número y agregar arriba sus NOVEDADES.
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const NOVEDADES = [
+  { version: '1.2.0', cambios: [
+    'Anotá hablando: tocá 🎤 y decí, por ejemplo, «gasté 2500 de nafta con Mercado Pago». Se completa el formulario y vos lo revisás antes de guardar.'
+  ] },
   { version: '1.1.0', cambios: [
     'Nueva pestaña Ahorros: creá metas, guardá plata desde tus cuentas y mirá cuánto te falta.',
     'Novedades como estas, para que sepas qué cambió en cada versión (menú ⋯ › Novedades).',
@@ -1145,9 +1177,10 @@ function etiquetaDia(iso) {
 function htmlMovimientos() {
   const todos = (state.months[ui.mes] || []).slice().sort((a, b) => b.fecha.localeCompare(a.fecha) || (b.creado - a.creado));
   const mes = nombreMes(ui.mes);
-  let h = `<div class="par-btns">
+  let h = `<div class="par-btns${Reconocedor ? ' con-voz' : ''}">
     <button class="btn btn-gas btn-grande" data-action="nuevo-mov" data-tipo="gasto">+ Gasto</button>
-    <button class="btn btn-ing btn-grande" data-action="nuevo-mov" data-tipo="ingreso">+ Ingreso</button></div>`;
+    <button class="btn btn-ing btn-grande" data-action="nuevo-mov" data-tipo="ingreso">+ Ingreso</button>
+    ${Reconocedor ? '<button class="btn btn-grande btn-voz" data-action="voz" aria-label="Anotar hablando" title="Anotar hablando">🎤</button>' : ''}</div>`;
   if (!state.config.inicioHecho) {
     h += `<div class="aviso-inicio"><strong>¿Cuánto tenés hoy?</strong>
       <p>Cargá lo que tenés hoy en cada cuenta y anotá desde ahora. La app calcula cuánto deberías tener, y si no coincide con lo real te das cuenta de que se te pasó algo.</p>
@@ -1473,14 +1506,17 @@ function abrirMov(tipo, mov, preset = {}) {
   $('#segPase').hidden = bilsActivas().length + metasActivas().length < 2 && !(mov && mov.tipo === 'pase');
   setTipoMov(mov ? mov.tipo : tipo, mov ? { cat: mov.cat, bil: mov.bil, desde: mov.desde, hacia: mov.hacia } : preset);
   $('#movMonto').value = mov ? centsAInput(mov.monto) : preset.monto ? centsAInput(preset.monto) : '';
-  $('#movNota').value = mov ? (mov.nota || '') : '';
+  $('#movNota').value = mov ? (mov.nota || '') : preset.nota || '';
   $('#movFecha').value = mov ? mov.fecha : preset.fecha || (ui.mes === mesDe(hoyISO()) ? hoyISO() : ui.mes + '-01');
   $('#movBorrar').hidden = !mov;
   $('#movAviso').hidden = !(mov && mov.deudaId);
   $('#movError').textContent = '';
+  $('#movVoz').hidden = !preset.voz;
+  $('#movVoz').textContent = preset.voz ? `🎤 Escuché: «${preset.voz}». Revisá que esté bien y tocá Guardar.` : '';
   hintMov();
   dlgMov.showModal();
-  if (!mov) $('#movMonto').focus();
+  // Si vino de la voz con el monto, se enfoca Guardar para que no se abra el teclado del celular.
+  if (!mov) (preset.voz && preset.monto ? $('#movGuardar') : $('#movMonto')).focus();
 }
 
 $('#movGuardar').addEventListener('click', () => {
@@ -1525,6 +1561,311 @@ $('#movBorrar').addEventListener('click', () => {
   dlgMov.close(); render();
   toast('Movimiento borrado.', foto);
 });
+
+/* ================= Anotar hablando ================= */
+// El navegador pasa la voz a texto (Web Speech API; en Chrome el audio lo procesa Google) e
+// interpretarFrase() saca de ese texto el tipo, el monto, la cuenta, la categoría y la fecha.
+// Nunca guarda solo: abre el formulario completo para que la persona revise y toque Guardar.
+const Reconocedor = window.SpeechRecognition || window.webkitSpeechRecognition;
+const normalizar = s => String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const sinVariante = s => String(s ?? '').replace(/\uFE0F/g, '');
+const tiene = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+
+const NUMEROS = {
+  un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10,
+  once: 11, doce: 12, trece: 13, catorce: 14, quince: 15, dieciseis: 16, diecisiete: 17, dieciocho: 18, diecinueve: 19,
+  veinte: 20, veintiun: 21, veintiuno: 21, veintiuna: 21, veintidos: 22, veintitres: 23, veinticuatro: 24, veinticinco: 25,
+  veintiseis: 26, veintisiete: 27, veintiocho: 28, veintinueve: 29, treinta: 30, cuarenta: 40, cincuenta: 50, sesenta: 60,
+  setenta: 70, ochenta: 80, noventa: 90, cien: 100, ciento: 100, doscientos: 200, doscientas: 200, trescientos: 300,
+  trescientas: 300, cuatrocientos: 400, cuatrocientas: 400, quinientos: 500, quinientas: 500, seiscientos: 600,
+  seiscientas: 600, setecientos: 700, setecientas: 700, ochocientos: 800, ochocientas: 800, novecientos: 900, novecientas: 900
+};
+// "lucas" y "palos": así se dice la plata en Argentina (una luca = mil pesos, un palo = un millón).
+const MULTIPLICADORES = { mil: 1e3, luca: 1e3, lucas: 1e3, millon: 1e6, millones: 1e6, palo: 1e6, palos: 1e6 };
+const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+const MESES_VOZ = MESES.map(normalizar);
+// Palabras que no aportan nada al detalle del movimiento.
+const RELLENO = new Set(('a al de del en con el la los las lo le les un una unos unas por para y o que me mi mis se su sus es fue era '
+  + 'hoy ayer anteayer antes recien pesos peso plata total eh bueno este esta esto desde hacia mas').split(' '));
+const VERBOS = new Set(('gaste gasto gastamos pague pago pagamos compre compramos cargue abone salio puse cobraron cobran cobre cobro '
+  + 'cobramos pagaron pagan entro entraron entra depositaron transfirieron mandaron giraron recibi ingreso ingresaron gane vendi '
+  + 'devolvieron dieron pase pasar paso transferi movi guarde ahorre aparte separe guardar ahorrar saque retire anota anotame anotar').split(' '));
+const RE_ME_COBRARON = /\bme (cobraron|cobro|cobran)\b/;
+const RE_INGRESO = /\b(cobre|cobramos|cobro|me pagaron|me pago|me pagan|me entro|me entraron|me entra|entraron|me depositaron|me transfirieron|me mandaron|me giraron|recibi|ingreso|ingresaron|gane|vendi|me devolvieron|me dieron)\b/;
+const RE_GASTO = /\b(gaste|gasto|gastamos|pague|pago|pagamos|compre|compramos|cargue|abone|me salio|salio|puse)\b/;
+const RE_PASE = /\b(pase|pasar|transferi|movi)\b/;
+const RE_GUARDAR = /\b(guarde|ahorre|aparte|separe|guardar|ahorrar)\b/;
+const RE_SACAR = /\b(saque|retire)\b/;
+
+// Palabras comunes que dan una pista de la categoría. Se busca la categoría por nombre y, si la
+// renombraste, por su ícono.
+const PISTAS = [
+  ['gasto', 'comida', '🍔', 'comida almuerzo almorce cena cene desayuno merienda pizza pizzas empanada empanadas hamburguesa hamburguesas lomito milanesa sanguche sandwich delivery pedidosya rotiseria panaderia facturas asado helado cafe kiosco'],
+  ['gasto', 'super|supermercado', '🛒', 'super supermercado almacen chino verduleria carniceria despensa mayorista mercaderia'],
+  ['gasto', 'transporte|nafta|combustible|moto|auto', '🚌⛽🏍🚗', 'colectivo bondi uber taxi remis remise nafta combustible sube peaje estacionamiento cabify didi boleto pasaje gasoil gnc'],
+  ['gasto', 'servicios', '💡', 'luz agua gas internet wifi cable telefono factura expensas emsa netflix spotify abono recarga'],
+  ['gasto', 'salidas', '🎉🍻', 'salida salidas boliche cine bar birra birras cerveza cervezas fernet joda recital entrada entradas'],
+  ['gasto', 'estudio|facultad', '📚', 'facultad facu cuota incade apunte apuntes fotocopias libro libros curso matricula'],
+  ['gasto', 'salud', '💊', 'farmacia remedio remedios medicamento medicamentos medico doctor consulta dentista odontologo analisis'],
+  ['gasto', 'ropa', '👕', 'ropa zapatillas remera remeras pantalon jean campera buzo zapatos medias'],
+  ['ingreso', 'sueldo|salario', '💼', 'sueldo salario quincena aguinaldo romisa'],
+  ['ingreso', 'refrigeracion', '❄', 'refrigeracion aire aires heladera heladeras freezer split instalacion'],
+  ['ingreso', 'alquiler de equipo', '🔧', 'alquiler alquile equipo'],
+  ['ingreso', 'ingreso extra|extra', '✨', 'changa changas extra venta propina regalo'],
+  ['ingreso', 'rendimientos', '📈', 'rendimiento rendimientos intereses interes plazo']
+].map(([tipo, nombres, emojis, palabras]) => ({ tipo, nombres: nombres.split('|'), emojis: [...sinVariante(emojis)], palabras: new Set(palabras.split(' ')) }));
+
+const isoDe = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const igual = (a, b) => a === b || (a.length > 3 && b.length > 3 && a.replace(/s$/, '') === b.replace(/s$/, ''));
+
+// "2500", "2.500", "2,500" y "1.500,50" (formato argentino) → número en pesos.
+function numeroDigitos(t) {
+  if (!/^\d[\d.,]*$/.test(t)) return NaN;
+  if (/^\d{1,3}([.,]\d{3})+$/.test(t)) return Number(t.replace(/[.,]/g, ''));
+  const m = t.match(/^(\d+(?:\.\d{3})*)[.,](\d{1,2})$/);
+  if (m) return Number(m[1].replace(/\./g, '') + '.' + m[2]);
+  return /^\d+$/.test(t) ? Number(t) : NaN;
+}
+const valorDe = t => (tiene(NUMEROS, t) ? NUMEROS[t] : numeroDigitos(t));
+const esDigito = t => /^\d/.test(t);
+
+function tokenizar(frase) {
+  return String(frase).replace(/\$/g, ' $ ').split(/\s+/)
+    .map(o => o.replace(/^[^\p{L}\p{N}$]+|[^\p{L}\p{N}$]+$/gu, ''))
+    .filter(Boolean)
+    .map(orig => ({ orig, t: normalizar(orig) }));
+}
+
+// Lee un número que empieza en i: "2500", "dos mil quinientos", "3 lucas", "1500 con 50", "una luca y media".
+function leerNumero(tk, i, usado) {
+  const libre = k => k < tk.length && !usado[k];
+  const t0 = libre(i) ? tk[i].t : '';
+  if (!Number.isFinite(valorDe(t0)) && t0 !== 'mil' && t0 !== 'millon') return null;
+  let total = 0, actual = 0, mult = 0, ultimo = null, j = i, centavos = 0, conMult = false;
+  for (; libre(j); j++) {
+    const t = tk[j].t, n = valorDe(t), m = tiene(MULTIPLICADORES, t) && MULTIPLICADORES[t];
+    if (Number.isFinite(n)) {
+      if (ultimo === 'digito' || ultimo === 'medio' || (ultimo === 'palabra' && esDigito(t))) break;
+      actual += n; ultimo = esDigito(t) ? 'digito' : 'palabra';
+    } else if (m) {
+      if (ultimo === 'medio') break;
+      if (m >= 1e6) total = (total + (actual || 1)) * m; else total += (actual || 1) * m;
+      actual = 0; mult = m; ultimo = 'mult'; conMult = true;
+    } else if ((t === 'medio' || t === 'media') && ultimo === 'mult') {
+      total += mult / 2; ultimo = 'medio';
+    } else if (t === 'y' && libre(j + 1) && ((ultimo === 'palabra' && tiene(NUMEROS, tk[j + 1].t)) || (ultimo === 'mult' && /^medi[oa]$/.test(tk[j + 1].t)))) {
+      continue;
+    } else if (t === 'con' && ultimo && libre(j + 1) && valorDe(tk[j + 1].t) < 100) {
+      centavos = valorDe(tk[j + 1].t); j += 2; break; // "1500 con 50" = $1500,50
+    } else break;
+  }
+  const valor = total + actual + centavos / 100;
+  const soloArticulo = j - i === 1 && ['un', 'uno', 'una'].includes(t0);
+  return valor > 0 && !soloArticulo ? { valor, desde: i, hasta: j - 1, conMult } : null;
+}
+
+function leerMonto(tk, usado) {
+  const candidatos = [];
+  for (let i = 0; i < tk.length; i++) {
+    const r = leerNumero(tk, i, usado);
+    if (!r) continue;
+    r.marcado = tk[r.desde - 1]?.t === '$' || ['pesos', 'peso'].includes(tk[r.hasta + 1]?.t) || r.conMult;
+    candidatos.push(r); i = r.hasta;
+  }
+  if (!candidatos.length) return NaN;
+  // Si alguno se dijo como plata ("$", "pesos", "lucas", "mil"), ese; si no, el más grande:
+  // en "compré 2 alfajores a 1500" el monto es 1500, no 2.
+  const marcados = candidatos.filter(c => c.marcado);
+  const r = (marcados.length ? marcados : candidatos).reduce((a, b) => (b.valor > a.valor ? b : a));
+  for (let k = r.desde; k <= r.hasta; k++) usado[k] = true;
+  if (tk[r.desde - 1]?.t === '$') usado[r.desde - 1] = true;
+  if (['pesos', 'peso'].includes(tk[r.hasta + 1]?.t)) usado[r.hasta + 1] = true;
+  return Math.round(r.valor * 100);
+}
+
+// "hoy", "ayer", "anteayer", "el lunes", "el 5", "el 5 de octubre". Si no se dice nada, hoy.
+function leerFecha(tk, usado, hoy) {
+  const base = parseISO(hoy), t = k => tk[k]?.t;
+  const atras = n => { const d = new Date(base); d.setDate(d.getDate() - n); return isoDe(d); };
+  const marcar = (...ks) => ks.forEach(k => { if (k >= 0 && k < tk.length) usado[k] = true; });
+  for (let i = 0; i < tk.length; i++) {
+    if (t(i) === 'anteayer') { marcar(i); return atras(2); }
+    if (t(i) === 'antes' && t(i + 1) === 'de' && t(i + 2) === 'ayer') { marcar(i, i + 1, i + 2); return atras(2); }
+  }
+  for (let i = 0; i < tk.length; i++) {
+    if (t(i) === 'ayer') { marcar(i); return atras(1); }
+    if (t(i) === 'hoy') { marcar(i); return hoy; }
+    const dia = DIAS_SEMANA.indexOf(t(i));
+    if (dia >= 0) {
+      marcar(i, ['el', 'este'].includes(t(i - 1)) ? i - 1 : -1, t(i + 1) === 'pasado' ? i + 1 : -1);
+      return atras((base.getDay() - dia + 7) % 7);
+    }
+    if ((t(i) === 'el' || t(i) === 'dia') && /^\d{1,2}$/.test(t(i + 1) || '') && !tiene(MULTIPLICADORES, t(i + 2) || '') && !['pesos', 'peso'].includes(t(i + 2))) {
+      const n = Number(t(i + 1)), mes = t(i + 2) === 'de' ? MESES_VOZ.indexOf(t(i + 3) === 'setiembre' ? 'septiembre' : t(i + 3)) : -1;
+      let d = new Date(base.getFullYear(), mes >= 0 ? mes : base.getMonth(), n);
+      if (d > base) d = mes >= 0 ? new Date(d.getFullYear() - 1, mes, n) : new Date(d.getFullYear(), d.getMonth() - 1, n);
+      if (n < 1 || d.getDate() !== n) continue;
+      marcar(t(i - 1) === 'el' && t(i) === 'dia' ? i - 1 : -1, i, i + 1);
+      if (mes >= 0) marcar(i + 2, i + 3);
+      return isoDe(d);
+    }
+  }
+  return hoy;
+}
+
+// Busca en la frase el nombre de una cuenta o categoría. Nombre completo vale más que una palabra suelta;
+// si dos empatan (ej. "banco" con "Banco Nación" y "Banco Macro") no elige ninguna.
+function buscarNombre(lista, tk, usado, alias = () => []) {
+  let mejor = null, puntos = 0, empate = false, marcas = [];
+  for (const item of lista) {
+    for (const nombre of [normalizar(item.nombre), ...alias(item)]) {
+      const pal = nombre.split(/\s+/).filter(Boolean);
+      if (!pal.length) continue;
+      for (let i = 0; i + pal.length <= tk.length; i++) {
+        if (!pal.every((p, k) => !usado[i + k] && igual(tk[i + k].t, p))) continue;
+        const pts = 10 + pal.length, ks = pal.map((_, k) => i + k);
+        if (pts > puntos) { mejor = item; puntos = pts; empate = false; marcas = ks; }
+        else if (pts === puntos && mejor !== item) empate = true;
+      }
+      for (const p of pal.filter(p => p.length >= 4 && !RELLENO.has(p))) {
+        const i = tk.findIndex((x, k) => !usado[k] && !VERBOS.has(x.t) && igual(x.t, p));
+        if (i < 0 || puntos > 1) continue;
+        if (puntos === 1 && mejor !== item) { empate = true; continue; }
+        mejor = item; puntos = 1; marcas = [i];
+      }
+    }
+  }
+  if (!mejor || empate) return null;
+  marcas.forEach(k => { usado[k] = true; });
+  return { item: mejor, pos: marcas[0] };
+}
+const aliasCuenta = b => {
+  const n = normalizar(b.nombre);
+  return n.includes('mercado pago') || n === 'mp' ? ['mp', 'mercadopago'] : n.includes('efectivo') ? ['cash'] : [];
+};
+
+function pistaCategoria(cats, tipo, tk, usado) {
+  for (let i = 0; i < tk.length; i++) {
+    if (usado[i]) continue;
+    for (const p of PISTAS) {
+      if (p.tipo !== tipo || !p.palabras.has(tk[i].t)) continue;
+      const c = cats.find(c => p.nombres.includes(normalizar(c.nombre)))
+        || cats.find(c => p.emojis.includes(sinVariante(c.emoji)));
+      if (c) return c;
+    }
+  }
+  return null;
+}
+
+// ctx: { cats: { gasto: [...], ingreso: [...] }, bils: [...], metas: [...], hoy: 'AAAA-MM-DD' }
+function interpretarFrase(frase, ctx) {
+  const tk = tokenizar(frase), usado = tk.map(() => false);
+  const texto = tk.map(x => x.t).join(' ');
+  const fecha = leerFecha(tk, usado, ctx.hoy);
+  const monto = leerMonto(tk, usado);
+  const r = { frase, monto, fecha };
+
+  // ¿Guardar en una meta, sacar de una meta o pasar plata entre cuentas?
+  const meta = (RE_GUARDAR.test(texto) || RE_SACAR.test(texto)) ? buscarNombre(ctx.metas, tk, usado) : null;
+  if (meta) {
+    const cuenta = buscarNombre(ctx.bils, tk, usado);
+    if (RE_GUARDAR.test(texto)) Object.assign(r, { tipo: 'pase', desde: cuenta?.item.id, hacia: meta.item.id, titulo: `Guardar en ${meta.item.nombre}` });
+    else Object.assign(r, { tipo: 'pase', desde: meta.item.id, hacia: cuenta?.item.id, titulo: `Sacar de ${meta.item.nombre}` });
+  } else if (RE_PASE.test(texto)) {
+    const a = buscarNombre(ctx.bils, tk, usado), b = a && buscarNombre(ctx.bils.filter(x => x !== a.item), tk, usado);
+    if (a && b) {
+      // "a Mercado Pago" es el destino aunque se diga primero.
+      const aEsDestino = ['a', 'al', 'hacia', 'para'].includes(tk[a.pos - 1]?.t) || ['de', 'del', 'desde'].includes(tk[b.pos - 1]?.t);
+      const [desde, hacia] = (aEsDestino ? [b, a] : a.pos < b.pos ? [a, b] : [b, a]).map(x => x.item.id);
+      Object.assign(r, { tipo: 'pase', desde, hacia });
+    } else if (a) r.bil = a.item.id;
+  }
+
+  if (!r.tipo) {
+    if (r.bil === undefined) r.bil = buscarNombre(ctx.bils, tk, usado)?.item.id;
+    let tipo = RE_ME_COBRARON.test(texto) ? 'gasto' : RE_INGRESO.test(texto) ? 'ingreso' : RE_GASTO.test(texto) ? 'gasto' : null;
+    const catDe = t => {
+      const copia = usado.slice(), n = buscarNombre(ctx.cats[t], tk, copia);
+      if (n) return { cat: n.item, usado: copia };
+      const p = pistaCategoria(ctx.cats[t], t, tk, copia);
+      return p ? { cat: p, usado: copia } : null;
+    };
+    if (!tipo) tipo = !catDe('gasto') && catDe('ingreso') ? 'ingreso' : 'gasto';
+    const c = catDe(tipo);
+    if (c) { r.cat = c.cat.id; c.usado.forEach((u, k) => { usado[k] = u; }); }
+    r.tipo = tipo;
+  }
+
+  // Lo que queda (sin montos, cuentas, fechas, verbos ni palabras de relleno) va como detalle.
+  const nota = tk.filter((x, k) => !usado[k] && !RELLENO.has(x.t) && !VERBOS.has(x.t) && x.t !== '$').map(x => x.orig).join(' ');
+  r.nota = cap(nota).slice(0, 80);
+  return r;
+}
+
+const ctxVoz = () => ({
+  cats: { gasto: catsActivas('gasto'), ingreso: catsActivas('ingreso') },
+  bils: bilsActivas(), metas: metasActivas(), hoy: hoyISO()
+});
+
+const dlgVoz = $('#dlgVoz');
+let reconocimiento = null;
+
+function escucharVoz() {
+  let alternativas = null, fallo = '';
+  const estado = (txt, activo) => { $('#vozEstado').textContent = txt; $('#vozMic').classList.toggle('activo', !!activo); };
+  $('#vozTexto').textContent = '';
+  $('#vozReintentar').hidden = true;
+  estado('Escuchando…', true);
+  if (!dlgVoz.open) dlgVoz.showModal();
+
+  const rec = new Reconocedor();
+  reconocimiento = rec;
+  rec.lang = 'es-AR';
+  rec.interimResults = true;
+  rec.maxAlternatives = 3;
+  rec.onresult = e => {
+    const resultados = Array.from(e.results);
+    $('#vozTexto').textContent = resultados.map(x => x[0].transcript).join(' ');
+    if (resultados.every(x => x.isFinal)) {
+      const unido = resultados.map(x => x[0].transcript).join(' ');
+      alternativas = resultados.length === 1 ? Array.from(resultados[0], a => a.transcript) : [unido];
+    }
+  };
+  rec.onerror = e => {
+    fallo = {
+      'not-allowed': 'No hay permiso para usar el micrófono. Activalo en el navegador: candado de la barra de direcciones › Micrófono.',
+      'service-not-allowed': 'Este navegador no deja usar el reconocimiento de voz. Probá con Chrome.',
+      'network': 'Para entender la voz hace falta internet.',
+      'audio-capture': 'No encontré un micrófono.',
+      'no-speech': 'No escuché nada. Probá de nuevo hablando cerca del celular.',
+      'language-not-supported': 'Este navegador no reconoce español.'
+    }[e.error] || (e.error === 'aborted' ? '' : 'Algo falló con el reconocimiento de voz. Probá de nuevo.');
+  };
+  rec.onend = () => {
+    if (reconocimiento !== rec) return;
+    reconocimiento = null;
+    if (!dlgVoz.open) return;
+    if (alternativas && alternativas.some(a => a.trim())) { usarFrase(alternativas.filter(a => a.trim())); return; }
+    estado(fallo || 'No escuché nada. Probá de nuevo hablando cerca del celular.', false);
+    $('#vozReintentar').hidden = false;
+  };
+  try { rec.start(); } catch (_) { fallo = 'No pude empezar a escuchar. Probá de nuevo.'; rec.onend(); }
+}
+
+function usarFrase(alternativas) {
+  const ctx = ctxVoz();
+  const lecturas = alternativas.map(a => interpretarFrase(a, ctx));
+  const r = lecturas.find(x => Number.isFinite(x.monto)) || lecturas[0];
+  dlgVoz.close();
+  abrirMov(r.tipo, null, {
+    monto: Number.isFinite(r.monto) ? r.monto : null, fecha: r.fecha, nota: r.nota, voz: r.frase,
+    ...(r.tipo === 'pase' ? { desde: r.desde, hacia: r.hacia, titulo: r.titulo } : { cat: r.cat, bil: r.bil })
+  });
+  if (!Number.isFinite(r.monto)) $('#movError').textContent = 'No entendí el monto: escribilo arriba.';
+}
+
+dlgVoz.addEventListener('close', () => { if (reconocimiento) { const rec = reconocimiento; reconocimiento = null; rec.abort(); } });
+$('#vozReintentar').addEventListener('click', escucharVoz);
 
 /* ================= Diálogo: crear / editar categoría ================= */
 const dlgCat = $('#dlgCat');
@@ -2292,6 +2633,7 @@ document.addEventListener('click', e => {
     case 'filtro-reset': ui.filtroTipo = 'todo'; ui.filtroBil = 'todas'; render(); break;
     case 'nuevo-mov': abrirMov(b.dataset.tipo); break;
     case 'nuevo-pase': abrirMov('pase'); break;
+    case 'voz': escucharVoz(); break;
     case 'edit-mov': {
       const m = (state.months[b.dataset.mes] || []).find(x => x.id === b.dataset.id);
       if (m) abrirMov(m.tipo, m);

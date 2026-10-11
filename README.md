@@ -9,6 +9,7 @@ App web para controlar ingresos, gastos y deudas desde el celular. Se instala co
 ## Funcionalidades
 
 - **Ingresos y gastos** con categorías propias (nombre e ícono), que se crean desde el mismo formulario.
+- **Anotar hablando:** tocás 🎤, decís por ejemplo *"gasté 2500 de nafta con Mercado Pago"* y el formulario se completa solo (tipo, monto, cuenta, categoría y fecha) para que lo revises antes de guardar. Entiende "lucas", "mil", "con 50" (centavos), "ayer", "el lunes" o "el 5", pases entre cuentas y guardar en una meta de ahorro.
 - **Varias cuentas** (Mercado Pago, efectivo y las que agregues), con el saldo que deberías tener y pases de plata entre cuentas que no cuentan como ingreso ni como gasto.
 - **Control contra el saldo real:** ingresás cuánto tenés de verdad y la app te dice si falta o sobra plata, y te ayuda a anotar la diferencia.
 - **Ahorros:** metas con objetivo y fecha, plata que se guarda y se saca desde las cuentas, y cuánto falta por mes para llegar.
@@ -19,7 +20,7 @@ App web para controlar ingresos, gastos y deudas desde el celular. Se instala co
 
 ## Privacidad
 
-No hay servidor ni base de datos compartida. Cada persona guarda lo suyo en el almacenamiento de su navegador (`localStorage`), así que nadie más puede verlo. La contra: si se borran los datos del navegador, se pierde lo anotado, por eso conviene descargar una copia de seguridad cada tanto desde **⋯ › Descargar copia de seguridad**.
+No hay servidor ni base de datos compartida. Cada persona guarda lo suyo en el almacenamiento de su navegador (`localStorage`), así que nadie más puede verlo. La única excepción es **anotar hablando**: el navegador manda el audio de esa frase a su servicio de reconocimiento de voz (en Chrome, el de Google) para pasarlo a texto. La libreta en sí no sale del dispositivo. La contra: si se borran los datos del navegador, se pierde lo anotado, por eso conviene descargar una copia de seguridad cada tanto desde **⋯ › Descargar copia de seguridad**.
 
 ## Decisiones técnicas
 
@@ -29,6 +30,7 @@ No hay servidor ni base de datos compartida. Cada persona guarda lo suyo en el a
 | HTML, CSS y JavaScript **en un solo archivo, sin frameworks** | No necesita compilación: se publica tal cual y es fácil de mantener. |
 | Categorías y cuentas referenciadas **por id**, no por nombre | Renombrar una categoría actualiza todo el historial sin romper nada. |
 | **PWA** (*Progressive Web App*) con *service worker* "red primero" | Con internet siempre carga la última versión publicada; sin conexión usa la copia guardada. |
+| Voz con la **Web Speech API** del navegador y un intérprete propio (`interpretarFrase`) | Gratis y sin servidor ni claves. Usa las categorías y cuentas de cada persona. En Firefox no existe, así que ahí el botón 🎤 no aparece. |
 | **ExcelJS** cargado solo al exportar | La app abre rápido; la librería se descarga únicamente cuando hace falta. |
 
 ## Estructura
