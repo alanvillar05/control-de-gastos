@@ -38,7 +38,8 @@ Si iniciás sesión con Google, la libreta se guarda en Firestore (la base de da
 | Voz con la **Web Speech API** del navegador y un intérprete propio (`interpretarFrase`) | Gratis y sin servidor ni claves. Usa las categorías y cuentas de cada persona. En Firefox no existe, así que ahí el botón 🎤 no aparece. |
 | Sincronización con **Firebase** (Auth con Google + Firestore), cargado solo si iniciás sesión | Trae resuelto el modo sin conexión y la actualización en tiempo real. Cada mes es un documento con un mapa `id → movimiento`, y solo se manda lo que cambió: dos celulares que anotan en el mismo mes no se pisan. |
 | La configuración de Firebase está **en el código, a la vista** | Es pública por diseño: identifica el proyecto, no da permisos. Lo que protege los datos son las reglas de seguridad. |
-| **ExcelJS** cargado solo al exportar | La app abre rápido; la librería se descarga únicamente cuando hace falta. |
+| **ExcelJS** cargado solo al exportar, con su huella (**SRI**, *Subresource Integrity*) | La app abre rápido; la librería se descarga únicamente cuando hace falta. La huella hace que el navegador la rechace si alguien la modificara en el CDN (el sitio de donde se baja). |
+| **CSP** (*Content Security Policy*) agregada al publicar | Es la lista de sitios desde donde la página puede cargar código y a cuáles puede mandar datos. Si alguien lograra meter código en la página, el navegador no lo ejecuta. Como el código de la app está dentro de `index.html`, la CSP lleva su huella (un *hash* SHA-256), que cambia con cada edición: por eso la calcula [`.github/csp.py`](.github/csp.py) al publicar y no se escribe a mano. GitHub Pages no deja configurar cabeceras, así que va como etiqueta `<meta>`. |
 
 ## Estructura
 
@@ -52,6 +53,7 @@ Si iniciás sesión con Google, la libreta se guarda en Firestore (la base de da
 | `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` | Íconos de la app. |
 | `capturas/` | Imágenes de este README. |
 | `.github/workflows/publicar.yml` | Publica `main` y `dev` (en `/beta/`) en GitHub Pages en cada push. |
+| `.github/csp.py` | Le agrega la CSP a `index.html` al publicar. Cada rama usa el suyo, así un cambio de la CSP se prueba primero en la beta. |
 | `.nojekyll` | Evita el procesamiento con Jekyll si alguna vez se publica directo desde una rama. |
 
 ## Probarla en la compu
@@ -64,6 +66,8 @@ python3 -m http.server 8000
 
 Y abrir http://localhost:8000.
 
+Así se abre **sin la CSP**, que se agrega recién al publicar. Para probar con la CSP, aplicarla a una copia: `python3 .github/csp.py copia/index.html`.
+
 ## Cómo se trabaja: ramas y versión de prueba
 
 | Rama | Se publica en | Para qué |
@@ -75,7 +79,7 @@ Y abrir http://localhost:8000.
 2. Se prueban en la beta. Lo que se anota ahí se guarda aparte, así que no toca los datos reales.
 3. Si está todo bien, se abre un *pull request* de `dev` a `main` y se acepta (*merge*). Esa es la versión que les llega a todos la próxima vez que abran la app con internet.
 
-Cada versión nueva sube el número de `VERSION` en `index.html` y agrega una entrada en `NOVEDADES`: la app se las muestra a cada persona una sola vez después de actualizar. Si se modifican `sw.js`, el manifest o los íconos, también hay que subir `VERSION_CACHE` en `sw.js` para que los celulares descarten la copia vieja.
+Cada versión nueva sube el número de `VERSION` en `index.html` y, si hay algo para contarle a quien la usa, agrega una entrada en `NOVEDADES`: la app se las muestra a cada persona una sola vez después de actualizar. Si se modifican `sw.js`, el manifest o los íconos, también hay que subir `VERSION_CACHE` en `sw.js` para que los celulares descarten la copia vieja.
 
 > GitHub Pages tiene que estar configurado con **Settings › Pages › Source: GitHub Actions**.
 
