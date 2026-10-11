@@ -693,7 +693,7 @@ const diasHasta = iso => Math.round((parseISO(iso) - parseISO(hoyISO())) / 86400
 const reFecha = /^\d{4}-\d{2}-\d{2}$/;
 
 // Versión de la app. Al publicar una nueva: subir el número y, si hay algo para contarle a quien la usa, agregar arriba sus NOVEDADES.
-const VERSION = '1.3.1';
+const VERSION = '1.3.2';
 const NOVEDADES = [
   { version: '1.3.0', cambios: [
     'Sincronizá con tu cuenta de Google (menú ⋯ › Sincronizar con Google) y usá la misma libreta en todos tus dispositivos, con o sin internet.'
@@ -1058,7 +1058,7 @@ const FIREBASE_CONFIG = {
 const FIREBASE_VER = '12.19.0';
 // App Check: con reCAPTCHA invisible le demuestra a Firebase que el pedido viene de esta página y no de un
 // programa suelto. La clave de reCAPTCHA también es pública: solo funciona en los dominios cargados en ella.
-const APP_CHECK_KEY = '';
+const APP_CHECK_KEY = '6Le5KuotAAAAAIvBQNSGUaSb4LhzGEhojT7DQe3d';
 // Para probar en la compu sin tocar la base real: http://localhost:8000/?emulador (con los emuladores de Firebase).
 const EMULADOR = location.hostname === 'localhost' && new URLSearchParams(location.search).has('emulador');
 const SYNC_OK = !!FIREBASE_CONFIG.apiKey || EMULADOR;
