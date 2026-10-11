@@ -31,19 +31,22 @@ def politica(html):
     auth = re.search(r"authDomain: '([^']+)'", html)
     if not auth:
         sys.exit('csp.py: no encontré authDomain en FIREBASE_CONFIG.')
+    # App Check usa reCAPTCHA, que carga su código y un marco invisible desde google.com
+    # (https://cloud.google.com/recaptcha/docs/faq). Solo se permite si la app tiene la clave cargada.
+    recaptcha = ' https://www.google.com/recaptcha/' if re.search(r"APP_CHECK_KEY = '[^']+'", html) else ''
     return '; '.join([
         "default-src 'self'",
         # El código de la app, Firebase (gstatic), el inicio de sesión de Google (apis.google.com) y ExcelJS.
         "script-src 'self' " + ' '.join(huella(s) for s in scripts)
-        + ' https://www.gstatic.com https://apis.google.com https://cdn.jsdelivr.net',
+        + ' https://www.gstatic.com https://apis.google.com https://cdn.jsdelivr.net' + recaptcha,
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         'font-src https://fonts.gstatic.com',
         # Firestore baja una imagen de prueba de google.com para saber si volvió la conexión.
         "img-src 'self' https://www.google.com",
         # Firestore, el inicio de sesión y la renovación de la sesión (todos en *.googleapis.com).
-        "connect-src 'self' https://*.googleapis.com",
+        "connect-src 'self' https://*.googleapis.com" + recaptcha,
         # Firebase abre un marco invisible en el dominio de autenticación para el inicio de sesión.
-        'frame-src https://' + auth.group(1),
+        'frame-src https://' + auth.group(1) + (recaptcha + ' https://recaptcha.google.com/recaptcha/' if recaptcha else ''),
         "worker-src 'self'",
         "manifest-src 'self'",
         "object-src 'none'",
