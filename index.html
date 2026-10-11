@@ -193,6 +193,9 @@ body{margin:0;background:var(--paper);color:var(--ink);font-family:"Atkinson Hyp
 .resumen-tot dt{font-size:.85rem;color:var(--soft);}
 .resumen-tot dd{margin:0;font-family:var(--display);font-weight:600;font-size:1.1rem;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}
 .nota-chica{font-size:.85rem;color:var(--soft);margin:8px 0 0;}
+/* La insignia de reCAPTCHA tapa los botones de abajo; el aviso que pide Google va en el menú (#menuRecaptcha). */
+.grecaptcha-badge{visibility:hidden;}
+.nota-chica a{color:inherit;}
 .h-sec{font-family:var(--display);font-weight:700;font-size:1.1rem;margin:26px 0 8px;}
 .tabla-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;}
 .tabla{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:.92rem;}
@@ -586,6 +589,7 @@ input[type="date"].input{min-height:46px;}
         <button class="menu-item" id="menuNovedades"><strong>Novedades</strong><span id="menuVersionTxt"></span></button>
       </div>
       <p class="nota-chica" id="menuInfo"></p>
+      <p class="nota-chica" id="menuRecaptcha" hidden>La sincronización está protegida por reCAPTCHA: se aplican la <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Política de Privacidad</a> y las <a href="https://policies.google.com/terms" target="_blank" rel="noopener">Condiciones del Servicio</a> de Google.</p>
     </div>
   </div>
 </dialog>
@@ -689,7 +693,7 @@ const diasHasta = iso => Math.round((parseISO(iso) - parseISO(hoyISO())) / 86400
 const reFecha = /^\d{4}-\d{2}-\d{2}$/;
 
 // Versión de la app. Al publicar una nueva: subir el número y, si hay algo para contarle a quien la usa, agregar arriba sus NOVEDADES.
-const VERSION = '1.3.1';
+const VERSION = '1.3.2';
 const NOVEDADES = [
   { version: '1.3.0', cambios: [
     'Sincronizá con tu cuenta de Google (menú ⋯ › Sincronizar con Google) y usá la misma libreta en todos tus dispositivos, con o sin internet.'
@@ -1052,6 +1056,9 @@ const FIREBASE_CONFIG = {
   appId: '1:505975107329:web:f761b681b75eb70301b500'
 };
 const FIREBASE_VER = '12.19.0';
+// App Check: con reCAPTCHA invisible le demuestra a Firebase que el pedido viene de esta página y no de un
+// programa suelto. La clave de reCAPTCHA también es pública: solo funciona en los dominios cargados en ella.
+const APP_CHECK_KEY = '6Le5KuotAAAAAIvBQNSGUaSb4LhzGEhojT7DQe3d';
 // Para probar en la compu sin tocar la base real: http://localhost:8000/?emulador (con los emuladores de Firebase).
 const EMULADOR = location.hostname === 'localhost' && new URLSearchParams(location.search).has('emulador');
 const SYNC_OK = !!FIREBASE_CONFIG.apiKey || EMULADOR;
@@ -1067,8 +1074,11 @@ const Google = {
   async cargar() {
     if (this.sdk) return this.sdk;
     const url = m => `https://www.gstatic.com/firebasejs/${FIREBASE_VER}/firebase-${m}.js`;
-    const [app, auth, fs] = await Promise.all([import(url('app')), import(url('auth')), import(url('firestore'))]);
+    const conAppCheck = !!APP_CHECK_KEY && !EMULADOR;
+    const [app, auth, fs, check] = await Promise.all([import(url('app')), import(url('auth')), import(url('firestore')),
+      conAppCheck ? import(url('app-check')) : null]);
     this.app = app.initializeApp(EMULADOR ? { apiKey: 'demo', authDomain: 'localhost', projectId: 'demo-libreta', appId: 'demo' } : FIREBASE_CONFIG);
+    if (check) check.initializeAppCheck(this.app, { provider: new check.ReCaptchaV3Provider(APP_CHECK_KEY), isTokenAutoRefreshEnabled: true });
     this.auth = auth.getAuth(this.app);
     this.db = fs.initializeFirestore(this.app, {
       ignoreUndefinedProperties: true,
@@ -2831,6 +2841,7 @@ function abrirMenu() {
   $('#menuGoogleTit').textContent = conGoogle ? 'Cerrar sesión de Google' : 'Sincronizar con Google';
   $('#menuGoogleTxt').textContent = conGoogle ? `Sincronizando con ${Google.user ? Google.user.email : 'tu cuenta'}.` : 'Usá la misma libreta en el celular, la compu y donde quieras.';
   if (!g.hidden && !conGoogle) Google.cargar().catch(() => {}); // así la ventana de Google abre al toque
+  $('#menuRecaptcha').hidden = g.hidden || !APP_CHECK_KEY;
   if (ES_BETA) $('#menuInfo').textContent += ' Esta es la versión de prueba: lo que anotes acá está separado de tu libreta normal.';
   $('#menuVersionTxt').textContent = `Versión ${VERSION}${ES_BETA ? ' (beta)' : ''}: qué cambió en cada actualización.`;
   $('#menuExcelTit').textContent = `Resumen ${ui.tab === 'resumen' ? ui.anio : ui.mes.slice(0, 4)} en Excel`;
