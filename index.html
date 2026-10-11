@@ -575,6 +575,7 @@ input[type="date"].input{min-height:46px;}
     <header class="sheet-head"><h2 id="dlgMenuTit">Opciones</h2><button class="icon-btn" data-close aria-label="Cerrar">✕</button></header>
     <div class="sheet-body">
       <div class="menu-lista">
+        <button class="menu-item" id="menuGoogle" hidden><strong id="menuGoogleTit"></strong><span id="menuGoogleTxt"></span></button>
         <button class="menu-item" id="menuCats"><strong>Categorías</strong><span>Crear, renombrar o archivar categorías de gastos e ingresos.</span></button>
         <button class="menu-item" id="menuBils"><strong>Cuentas y saldos iniciales</strong><span>Mercado Pago, efectivo y las que agregues.</span></button>
         <button class="menu-item" id="menuExcel"><strong id="menuExcelTit">Resumen anual en Excel</strong><span>Mes a mes, por categoría y todos los movimientos.</span></button>
@@ -688,8 +689,11 @@ const diasHasta = iso => Math.round((parseISO(iso) - parseISO(hoyISO())) / 86400
 const reFecha = /^\d{4}-\d{2}-\d{2}$/;
 
 // Versión de la app. Al publicar una nueva: subir el número y agregar arriba sus NOVEDADES.
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 const NOVEDADES = [
+  { version: '1.3.0', cambios: [
+    'Sincronizá con tu cuenta de Google (menú ⋯ › Sincronizar con Google) y usá la misma libreta en todos tus dispositivos, con o sin internet.'
+  ] },
   { version: '1.2.0', cambios: [
     'Anotá hablando: tocá 🎤 y decí, por ejemplo, «gasté 2500 de nafta con Mercado Pago». Se completa el formulario y vos lo revisás antes de guardar.'
   ] },
@@ -913,6 +917,8 @@ const Store = {
   pendientes: new Set(), escribiendo: new Set(),
 
   async iniciar() {
+    // En este dispositivo ya se inició sesión con Google: se abre la libreta sincronizada.
+    if (SYNC_OK && prefs.google && !enClaude()) return Google.iniciar();
     let db = null, user = null;
     if (window.claude && typeof window.claude.use === 'function') {
       try { [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]); } catch (_) {}
@@ -973,6 +979,7 @@ const Store = {
   ocupado(clave) { return this.pendientes.has(clave) || this.escribiendo.has(clave); },
 
   cambio(clave) {
+    if (this.modo === 'google') { Google.escribir(clave); pintarEstado(); return; }
     if (this.modo === 'nube') { this.pendientes.add(clave); this.vaciar(clave); }
     else this.guardarLocal();
     pintarEstado();
@@ -1028,6 +1035,267 @@ const Store = {
     catch (_) { this.modo = 'memoria'; }
   }
 };
+
+/* ================= Sincronización con Google (Firebase) =================
+   Opcional. Si la persona inicia sesión con Google, la libreta se guarda en Firestore (la base de datos de
+   Firebase) en usuarios/{su id}/libreta/{documento}: uno por mes ("m-2026-10"), uno de deudas ("cuentas")
+   y uno de configuración ("config"). La beta usa usuarios/{su id}/beta, aparte.
+   Movimientos y deudas se guardan como un mapa id → dato y solo se manda lo que cambió: así dos celulares
+   que anotan en el mismo mes no se pisan. Firestore guarda una copia en el dispositivo, así que sin internet
+   sigue andando y sube los cambios cuando vuelve la conexión.
+   FIREBASE_CONFIG es pública a propósito (cualquiera la ve en el código de la página): lo que protege los
+   datos son las reglas de firestore.rules, que solo dejan a cada persona leer y escribir lo suyo. */
+const FIREBASE_CONFIG = {
+  apiKey: '',
+  authDomain: '',
+  projectId: '',
+  appId: ''
+};
+const FIREBASE_VER = '12.19.0';
+// Para probar en la compu sin tocar la base real: http://localhost:8000/?emulador (con los emuladores de Firebase).
+const EMULADOR = location.hostname === 'localhost' && new URLSearchParams(location.search).has('emulador');
+const SYNC_OK = !!FIREBASE_CONFIG.apiKey || EMULADOR;
+const COLECCION = ES_BETA ? 'beta' : 'libreta';
+// JSON con las claves ordenadas: Firestore devuelve los campos en otro orden y así se comparan bien.
+const firma = v => JSON.stringify(v, (k, x) => (x && typeof x === 'object' && !Array.isArray(x)
+  ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => (a < b ? -1 : 1))) : x));
+
+const Google = {
+  sdk: null, app: null, auth: null, db: null, user: null, unsub: null,
+  base: {}, enviando: 0, error: false,
+
+  async cargar() {
+    if (this.sdk) return this.sdk;
+    const url = m => `https://www.gstatic.com/firebasejs/${FIREBASE_VER}/firebase-${m}.js`;
+    const [app, auth, fs] = await Promise.all([import(url('app')), import(url('auth')), import(url('firestore'))]);
+    this.app = app.initializeApp(EMULADOR ? { apiKey: 'demo', authDomain: 'localhost', projectId: 'demo-libreta', appId: 'demo' } : FIREBASE_CONFIG);
+    this.auth = auth.getAuth(this.app);
+    this.db = fs.initializeFirestore(this.app, {
+      ignoreUndefinedProperties: true,
+      localCache: fs.persistentLocalCache({ tabManager: fs.persistentMultipleTabManager() })
+    });
+    if (EMULADOR) {
+      auth.connectAuthEmulator(this.auth, 'http://localhost:9099', { disableWarnings: true });
+      fs.connectFirestoreEmulator(this.db, 'localhost', 8080);
+    }
+    this.sdk = { auth, fs };
+    return this.sdk;
+  },
+
+  // Espera a saber si en este dispositivo hay una sesión abierta.
+  usuarioActual() {
+    return new Promise(resolve => { const off = this.sdk.auth.onAuthStateChanged(this.auth, u => { off(); resolve(u); }); });
+  },
+
+  coleccion() { return this.sdk.fs.collection(this.db, 'usuarios', this.user.uid, COLECCION); },
+
+  // Pasa los documentos de Firestore al formato de la app, validados igual que una copia de seguridad.
+  leer(docs) {
+    const months = {}, base = {}; let deudas = [], config = null;
+    const mapa = arr => new Map(arr.map(x => [x.id, firma(x)]));
+    for (const d of docs) {
+      const data = d.data() || {}, items = data.items && typeof data.items === 'object' ? Object.values(data.items) : [];
+      if (d.id === 'config') { config = normalizarConfig(data); base.config = firma(config); }
+      else if (d.id === 'cuentas') { deudas = items.map(validarDeuda).filter(Boolean); base.cuentas = mapa(deudas); }
+      else if (/^m-\d{4}-\d{2}$/.test(d.id)) {
+        const k = d.id.slice(2);
+        months[k] = items.map(m => validarMov(m, k)).filter(Boolean);
+        base[d.id] = mapa(months[k]);
+      }
+    }
+    return { months, deudas, config, base };
+  },
+
+  // Al abrir la app en un dispositivo donde ya se inició sesión.
+  async iniciar() {
+    Store.modo = 'google'; pintarEstado();
+    setTimeout(() => { if (cargando) $('#panel').innerHTML = '<p class="cargando">Está tardando más de lo normal. Revisá tu conexión.</p>'; }, 9000);
+    try {
+      await this.cargar();
+      this.user = await this.usuarioActual();
+    } catch (_) {
+      // No se pudo cargar Firebase (por ejemplo, sin internet y sin la copia guardada): se reintenta con conexión.
+      this.error = true; pintarEstado();
+      $('#panel').innerHTML = '<p class="cargando">No se pudo abrir tu libreta sincronizada. Revisá tu conexión: apenas vuelva, se recarga sola.</p>';
+      window.addEventListener('online', () => location.reload(), { once: true });
+      return;
+    }
+    if (!this.user) {
+      // La sesión se cerró (por ejemplo, desde la otra versión de la app): vuelve la libreta de este navegador.
+      prefs.google = null; guardarPrefs();
+      Store.pasarALocal();
+      toast('Se cerró tu sesión de Google. Volvé a iniciarla desde el menú ⋯.');
+      return;
+    }
+    prefs.google = { email: this.user.email }; guardarPrefs();
+    this.escuchar();
+  },
+
+  escuchar() {
+    this.unsub = this.sdk.fs.onSnapshot(this.coleccion(), { includeMetadataChanges: true }, snap => {
+      // Si la copia del dispositivo está vacía, se espera la del servidor para no crear una libreta nueva encima de la real.
+      if (cargando && snap.metadata.fromCache && snap.empty) return;
+      if (cargando || snap.docChanges().length) {
+        const d = this.leer(snap.docs);
+        state.months = d.months; state.deudas = d.deudas;
+        if (d.config) state.config = d.config;
+        this.base = d.base;
+        if (cargando) listo(); else { migrar(); render(); }
+      }
+      pintarEstado();
+    }, () => {
+      this.error = true; pintarEstado();
+      toast('Se cortó la sincronización con tu cuenta. Recargá la página.');
+    });
+  },
+
+  // Manda a Firestore lo que cambió en un documento. No espera al servidor: Firestore lo guarda en el
+  // dispositivo al instante y lo sube cuando hay conexión.
+  escribir(clave) {
+    const { fs } = this.sdk, ref = fs.doc(this.coleccion(), clave);
+    let envio;
+    if (clave === 'config') {
+      const j = firma(state.config);
+      if (!state.config || this.base.config === j) return;
+      this.base.config = j;
+      envio = fs.setDoc(ref, clonar(state.config));
+    } else {
+      const arr = clave === 'cuentas' ? state.deudas : state.months[clave.slice(2)] || [];
+      const antes = this.base[clave] || new Map(), ahora = new Map(arr.map(x => [x.id, firma(x)]));
+      const items = {}, campos = [];
+      for (const x of arr) if (antes.get(x.id) !== ahora.get(x.id)) { items[x.id] = clonar(x); campos.push(new fs.FieldPath('items', x.id)); }
+      for (const id of antes.keys()) if (!ahora.has(id)) { items[id] = fs.deleteField(); campos.push(new fs.FieldPath('items', id)); }
+      this.base[clave] = ahora;
+      if (!campos.length) return;
+      envio = fs.setDoc(ref, { items }, { mergeFields: campos });
+    }
+    this.enviando++;
+    envio.then(() => { this.error = false; }, () => {
+      this.error = true;
+      toast('No se pudo guardar en tu cuenta de Google. Recargá la página.');
+    }).finally(() => { this.enviando--; pintarEstado(); });
+  },
+
+  escribirTodo() {
+    for (const k of Object.keys(state.months)) this.escribir('m-' + k);
+    this.escribir('cuentas');
+    this.escribir('config');
+  },
+
+  async iniciarSesion() {
+    if (Store.modo !== 'local' && Store.modo !== 'memoria') return;
+    const { auth } = await this.cargar().catch(() => ({}));
+    if (!auth) { toast('Para iniciar sesión hace falta internet.'); return; }
+    try {
+      const proveedor = new auth.GoogleAuthProvider();
+      proveedor.setCustomParameters({ prompt: 'select_account' });
+      if (EMULADOR) {
+        // El emulador acepta una cuenta de Google inventada: alcanza con un mail.
+        const email = prompt('Emulador: mail de la cuenta de prueba', 'prueba@example.com');
+        if (!email) return;
+        const token = JSON.stringify({ sub: email, email, email_verified: true });
+        this.user = (await auth.signInWithCredential(this.auth, auth.GoogleAuthProvider.credential(token))).user;
+      } else this.user = (await auth.signInWithPopup(this.auth, proveedor)).user;
+    } catch (e) {
+      const msg = {
+        'auth/popup-closed-by-user': '', 'auth/cancelled-popup-request': '', 'auth/user-cancelled': '',
+        'auth/popup-blocked': 'El navegador bloqueó la ventana de Google. Permití las ventanas emergentes y probá de nuevo.',
+        'auth/network-request-failed': 'Para iniciar sesión hace falta internet.',
+        'auth/unauthorized-domain': 'Este sitio no está autorizado en Firebase (Authentication › Dominios autorizados).',
+        'auth/operation-not-supported-in-this-environment': 'Abrí la libreta en Chrome, no desde la app instalada, para iniciar sesión.'
+      }[e && e.code];
+      if (msg !== '') toast(msg || 'No se pudo iniciar sesión con Google. Probá de nuevo.');
+      return;
+    }
+
+    // Juntar lo anotado en este dispositivo con lo que ya tenga la cuenta.
+    let nube;
+    try { nube = this.leer((await this.sdk.fs.getDocsFromServer(this.coleccion())).docs); }
+    catch (_) { await this.salir(); toast('No se pudo leer tu libreta de Google. Revisá la conexión y probá de nuevo.'); return; }
+    const local = capturar();
+    const hayLocal = Object.values(local.months).some(a => a.length) || local.deudas.length > 0;
+    const hayNube = Object.values(nube.months).some(a => a.length) || nube.deudas.length > 0;
+    let datos = hayNube ? nube : local;
+    if (hayLocal && hayNube) {
+      const ok = await confirmar({
+        titulo: 'Tu cuenta ya tiene una libreta',
+        texto: `${this.user.email} ya tiene movimientos anotados. ¿Le sumamos lo que anotaste en este dispositivo? Las categorías y cuentas que se llaman igual se juntan en una. Si cancelás, no se inicia sesión y todo queda como estaba.`,
+        ok: 'Sumar y sincronizar', peligro: false
+      });
+      if (!ok) { await this.salir(); return; }
+      datos = unirLibretas(nube, local);
+    }
+
+    state.months = datos.months; state.deudas = datos.deudas; state.config = datos.config || nube.config || local.config;
+    this.base = nube.base;
+    Store.modo = 'google';
+    prefs.google = { email: this.user.email }; guardarPrefs();
+    migrar();
+    this.escribirTodo();
+    this.escuchar();
+    render();
+    toast(`Listo: tu libreta se sincroniza con ${this.user.email}.`);
+    // La copia suelta de este navegador ya quedó en la cuenta: se borra cuando el servidor confirma.
+    this.sdk.fs.waitForPendingWrites(this.db).then(() => { try { localStorage.removeItem(LS_KEY); } catch (_) {} });
+  },
+
+  async salir() {
+    try { if (this.unsub) this.unsub(); await this.sdk.auth.signOut(this.auth); } catch (_) {}
+    this.unsub = null; this.user = null;
+  },
+
+  async cerrarSesion() {
+    if (this.enviando) {
+      toast(navigator.onLine ? 'Esperá a que termine de sincronizar y probá de nuevo.' : 'Hay cambios sin subir. Conectate a internet antes de cerrar sesión.');
+      return;
+    }
+    const ok = await confirmar({
+      titulo: 'Cerrar sesión de Google',
+      texto: 'Tu libreta queda guardada en tu cuenta y la vas a ver al volver a iniciar sesión. En este dispositivo se borra la copia y arranca una libreta vacía.',
+      ok: 'Cerrar sesión'
+    });
+    if (!ok) return;
+    await this.salir();
+    try { await this.sdk.fs.terminate(this.db); await this.sdk.fs.clearIndexedDbPersistence(this.db); } catch (_) {}
+    prefs.google = null; guardarPrefs();
+    location.reload();
+  }
+};
+
+// Junta la libreta de este dispositivo con la de la cuenta. Cada dispositivo crea las categorías y cuentas
+// de fábrica con ids distintos, así que las que se llaman igual se toman como la misma.
+function unirLibretas(nube, local) {
+  const config = clonar(nube.config || local.config), mapa = new Map();
+  const mismo = (a, b) => a.nombre.trim().toLowerCase() === b.nombre.trim().toLowerCase();
+  if (nube.config && local.config) {
+    let orden = config.categorias.reduce((m, c) => Math.max(m, c.orden), -1);
+    for (const c of local.config.categorias) {
+      const igual = config.categorias.find(x => x.id === c.id) || config.categorias.find(x => x.tipo === c.tipo && mismo(x, c));
+      if (igual) mapa.set(c.id, igual.id); else config.categorias.push({ ...clonar(c), orden: ++orden });
+    }
+    for (const b of local.config.billeteras) {
+      const igual = config.billeteras.find(x => x.id === b.id) || config.billeteras.find(x => esAhorro(x) === esAhorro(b) && mismo(x, b));
+      if (!igual) { config.billeteras.push(clonar(b)); continue; }
+      mapa.set(b.id, igual.id);
+      if (!igual.saldoInicial && b.saldoInicial) igual.saldoInicial = b.saldoInicial;
+    }
+    config.inicioHecho = !!(nube.config.inicioHecho || local.config.inicioHecho);
+  }
+  const id = x => (x && mapa.has(x) ? mapa.get(x) : x);
+  const months = clonar(nube.months);
+  for (const [k, arr] of Object.entries(local.months)) {
+    const destino = months[k] || (months[k] = []);
+    for (const m of arr) {
+      if (destino.some(x => x.id === m.id)) continue;
+      const c = clonar(m);
+      for (const campo of ['cat', 'bil', 'desde', 'hacia']) if (c[campo]) c[campo] = id(c[campo]);
+      destino.push(c);
+    }
+  }
+  const deudas = clonar(nube.deudas);
+  for (const d of local.deudas) if (!deudas.some(x => x.id === d.id)) deudas.push({ ...clonar(d), bil: id(d.bil) });
+  return { months, deudas, config };
+}
 
 // Convierte datos de la versión anterior (categorías por nombre, sin cuenta). Es idempotente.
 function migrar() {
@@ -1115,8 +1383,10 @@ function render() {
 
 function pintarEstado() {
   const el = $('#estado');
-  el.classList.toggle('error', Store.modo === 'nube' && Store.error);
-  el.textContent = Store.modo === 'cargando' ? 'Abriendo…'
+  el.classList.toggle('error', (Store.modo === 'nube' && Store.error) || (Store.modo === 'google' && Google.error));
+  el.textContent = cargando && Store.modo !== 'memoria' ? 'Abriendo…'
+    : Store.modo === 'google' ? (Google.error ? 'Sin guardar' : Google.enviando ? (navigator.onLine ? 'Sincronizando…' : 'Sin conexión') : 'Sincronizado')
+    : Store.modo === 'cargando' ? 'Abriendo…'
     : Store.modo === 'nube' ? (Store.error ? 'Sin guardar' : (Store.pendientes.size || Store.escribiendo.size) ? 'Guardando…' : 'Guardado')
     : Store.modo === 'local' ? 'En este navegador' : 'Sin guardar';
 }
@@ -1429,11 +1699,12 @@ const hintDeuda = conectarHint('#deudaMonto', '#deudaMontoHint');
 const hintPago = conectarHint('#pagoMonto', '#pagoMontoHint');
 const hintBil = conectarHint('#bilReal', '#bilRealHint');
 
-function confirmar({ titulo, texto: txt, ok }) {
+function confirmar({ titulo, texto: txt, ok, peligro = true }) {
   const dlg = $('#dlgConfirm');
   $('#dlgConfirmTit').textContent = titulo;
   $('#dlgConfirmTxt').textContent = txt;
   $('#dlgConfirmOk').textContent = ok;
+  $('#dlgConfirmOk').className = 'btn ' + (peligro ? 'btn-danger-fill' : 'btn-primary');
   return new Promise(resolve => {
     let aceptado = false;
     $('#dlgConfirmOk').onclick = () => { aceptado = true; dlg.close(); };
@@ -2548,9 +2819,15 @@ function abrirMenu() {
   $('#menuCompartir').hidden = location.protocol === 'file:' && !enClaude();
   $('#menuInfo').textContent =
     Store.modo === 'nube' ? 'Lo que anotás se guarda en tu cuenta de Claude y solo vos lo ves, desde cualquier dispositivo. Si compartís el link, cada persona arranca con su propia libreta vacía.'
+    : Store.modo === 'google' ? `Lo que anotás se guarda en tu cuenta de Google (${Google.user ? Google.user.email : ''}) y se sincroniza con todos los dispositivos donde inicies sesión. Sin internet sigue andando y se sube cuando vuelve la conexión.`
     : Store.modo === 'local' ? 'Lo que anotás se guarda solo en este navegador. Si borrás los datos del navegador se pierde, así que descargá una copia de vez en cuando.'
     : Store.modo === 'memoria' ? 'Este navegador no permite guardar. Descargá una copia antes de cerrar la página.'
     : 'Abriendo tu libreta…';
+  const g = $('#menuGoogle'), conGoogle = Store.modo === 'google';
+  g.hidden = !SYNC_OK || enClaude() || !['local', 'memoria', 'google'].includes(Store.modo);
+  $('#menuGoogleTit').textContent = conGoogle ? 'Cerrar sesión de Google' : 'Sincronizar con Google';
+  $('#menuGoogleTxt').textContent = conGoogle ? `Sincronizando con ${Google.user ? Google.user.email : 'tu cuenta'}.` : 'Usá la misma libreta en el celular, la compu y donde quieras.';
+  if (!g.hidden && !conGoogle) Google.cargar().catch(() => {}); // así la ventana de Google abre al toque
   if (ES_BETA) $('#menuInfo').textContent += ' Esta es la versión de prueba: lo que anotes acá está separado de tu libreta normal.';
   $('#menuVersionTxt').textContent = `Versión ${VERSION}${ES_BETA ? ' (beta)' : ''}: qué cambió en cada actualización.`;
   $('#menuExcelTit').textContent = `Resumen ${ui.tab === 'resumen' ? ui.anio : ui.mes.slice(0, 4)} en Excel`;
@@ -2581,6 +2858,10 @@ $('#btnEnviarLink').addEventListener('click', async () => {
 });
 $('#linkApp').addEventListener('focus', e => e.target.select());
 
+$('#menuGoogle').addEventListener('click', () => {
+  $('#dlgMenu').close();
+  if (Store.modo === 'google') Google.cerrarSesion(); else Google.iniciarSesion();
+});
 $('#menuNovedades').addEventListener('click', () => { $('#dlgMenu').close(); abrirNovedades(null); });
 $('#menuCats').addEventListener('click', () => { if (cargando) return; $('#dlgMenu').close(); abrirCats('gasto'); });
 $('#menuBils').addEventListener('click', () => { if (cargando) return; $('#dlgMenu').close(); abrirBils(); });
@@ -2679,7 +2960,11 @@ document.addEventListener('click', e => {
       break;
     }
     case 'menu': abrirMenu(); break;
-    case 'estado': if (Store.modo === 'nube' && Store.error) Store.reintentar(); else abrirMenu(); break;
+    case 'estado':
+      if (Store.modo === 'nube' && Store.error) Store.reintentar();
+      else if (Store.modo === 'google' && Google.error) location.reload();
+      else abrirMenu();
+      break;
   }
 });
 
@@ -2697,6 +2982,9 @@ $('#tabs').addEventListener('keydown', e => {
   if (orden[destino] === 'resumen' && ui.tab !== 'resumen') ui.anio = Number(ui.mes.slice(0, 4));
   ui.tab = orden[destino]; render(); $('#tab-' + ui.tab).focus();
 });
+
+window.addEventListener('online', pintarEstado);
+window.addEventListener('offline', pintarEstado);
 
 if (ES_BETA) {
   document.title += ' (beta)';

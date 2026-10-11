@@ -1,0 +1,47 @@
+rules_version = '2';
+
+// Reglas de seguridad de Firestore para la Libreta de cuentas.
+// Se pegan en la consola de Firebase: Firestore Database › Reglas › Publicar.
+//
+// La idea: la configuración de Firebase que va en index.html es pública, así que cualquiera podría
+// intentar hablarle a la base. Estas reglas son las que deciden qué se puede hacer:
+//   1. Hay que haber iniciado sesión con Google.
+//   2. Cada persona solo puede leer y escribir dentro de usuarios/{su propio id}.
+//   3. Solo se aceptan los documentos que usa la app, con la forma que usa la app.
+// Todo lo que no está permitido acá está prohibido.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function esDueno(uid) {
+      return request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
+    // Un mes ("m-2026-10") o las deudas ("cuentas"): solo el campo items, que es un mapa id → dato.
+    function esLista(doc) {
+      let datos = request.resource.data;
+      return (doc == 'cuentas' || doc.matches('m-[0-9]{4}-[0-9]{2}'))
+        && datos.keys().hasOnly(['items'])
+        && datos.items is map
+        && datos.items.size() <= 3000;
+    }
+
+    // Categorías y cuentas.
+    function esConfig(doc) {
+      let datos = request.resource.data;
+      return doc == 'config'
+        && datos.keys().hasOnly(['version', 'inicioHecho', 'categorias', 'billeteras'])
+        && datos.categorias is list && datos.categorias.size() <= 500
+        && datos.billeteras is list && datos.billeteras.size() <= 200;
+    }
+
+    // "libreta" es la versión normal y "beta" la de prueba.
+    match /usuarios/{uid}/{libreta}/{doc} {
+      allow read, delete: if esDueno(uid);
+      allow create, update: if esDueno(uid)
+        && libreta in ['libreta', 'beta']
+        && (esLista(doc) || esConfig(doc));
+    }
+  }
+}

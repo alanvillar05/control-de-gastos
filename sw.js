@@ -1,6 +1,6 @@
 // Service worker: guarda una copia de la app para que abra sin conexión.
 // Estrategia "red primero": si hay internet se baja siempre la última versión publicada;
-// si no hay, se usa la copia guardada. Los datos del usuario no pasan por acá (están en localStorage).
+// si no hay, se usa la copia guardada. Los datos del usuario no pasan por acá (están en localStorage o en Firestore).
 
 // La versión estable y la beta comparten dominio y almacenamiento de caché: el nombre incluye
 // la carpeta (scope) para que cada una maneje solo el suyo.
@@ -29,8 +29,18 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  // Firebase (para sincronizar con Google): la versión va en la URL y ese archivo nunca cambia,
+  // así que se guarda la primera vez y después se usa la copia. Así la libreta sincronizada abre sin conexión.
+  if (url.origin === 'https://www.gstatic.com' && url.pathname.startsWith('/firebasejs/')) {
+    e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(resp => {
+      if (resp.ok) { const copia = resp.clone(); caches.open(CACHE).then(c => c.put(e.request, copia)); }
+      return resp;
+    })));
+    return;
+  }
   // Fuentes y la librería del Excel vienen de otros sitios: van directo a internet.
-  if (new URL(e.request.url).origin !== self.location.origin) return;
+  if (url.origin !== self.location.origin) return;
   e.respondWith(
     fetch(e.request)
       .then(resp => {
