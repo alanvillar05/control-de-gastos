@@ -693,8 +693,11 @@ const diasHasta = iso => Math.round((parseISO(iso) - parseISO(hoyISO())) / 86400
 const reFecha = /^\d{4}-\d{2}-\d{2}$/;
 
 // Versión de la app. Al publicar una nueva: subir el número y, si hay algo para contarle a quien la usa, agregar arriba sus NOVEDADES.
-const VERSION = '1.3.2';
+const VERSION = '1.3.3';
 const NOVEDADES = [
+  { version: '1.3.3', cambios: [
+    'Anotar hablando entiende bien los montos grandes: «gasté 100 mil de nafta» ya no se anota como 100.'
+  ] },
   { version: '1.3.0', cambios: [
     'Sincronizá con tu cuenta de Google (menú ⋯ › Sincronizar con Google) y usá la misma libreta en todos tus dispositivos, con o sin internet.'
   ] },
@@ -1911,7 +1914,10 @@ const valorDe = t => (tiene(NUMEROS, t) ? NUMEROS[t] : numeroDigitos(t));
 const esDigito = t => /^\d/.test(t);
 
 function tokenizar(frase) {
-  return String(frase).replace(/\$/g, ' $ ').split(/\s+/)
+  return String(frase)
+    // Chrome a veces escribe los miles separados con espacio ("100 000"): se juntan antes de cortar en palabras.
+    .replace(/\b(\d{1,3})((?:[ \u00a0\u202f]\d{3})+)\b/g, (_, a, b) => a + b.replace(/\D/g, ''))
+    .replace(/\$/g, ' $ ').split(/\s+/)
     .map(o => o.replace(/^[^\p{L}\p{N}$]+|[^\p{L}\p{N}$]+$/gu, ''))
     .filter(Boolean)
     .map(orig => ({ orig, t: normalizar(orig) }));
