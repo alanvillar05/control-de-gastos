@@ -693,7 +693,7 @@ const diasHasta = iso => Math.round((parseISO(iso) - parseISO(hoyISO())) / 86400
 const reFecha = /^\d{4}-\d{2}-\d{2}$/;
 
 // Versión de la app. Al publicar una nueva: subir el número y, si hay algo para contarle a quien la usa, agregar arriba sus NOVEDADES.
-const VERSION = '1.3.3';
+const VERSION = '1.3.4';
 const NOVEDADES = [
   { version: '1.3.3', cambios: [
     'Anotar hablando entiende bien los montos grandes: «gasté 100 mil de nafta» ya no se anota como 100.'
@@ -1059,8 +1059,9 @@ const FIREBASE_CONFIG = {
   appId: '1:505975107329:web:f761b681b75eb70301b500'
 };
 const FIREBASE_VER = '12.19.0';
-// App Check: con reCAPTCHA invisible le demuestra a Firebase que el pedido viene de esta página y no de un
-// programa suelto. La clave de reCAPTCHA también es pública: solo funciona en los dominios cargados en ella.
+// App Check: con reCAPTCHA invisible (Fraud Defense, el nombre nuevo de reCAPTCHA Enterprise) le demuestra a
+// Firebase que el pedido viene de esta página y no de un programa suelto. La clave de reCAPTCHA también es
+// pública: solo funciona en los dominios cargados en ella.
 const APP_CHECK_KEY = '6Le5KuotAAAAAIvBQNSGUaSb4LhzGEhojT7DQe3d';
 // Para probar en la compu sin tocar la base real: http://localhost:8000/?emulador (con los emuladores de Firebase).
 const EMULADOR = location.hostname === 'localhost' && new URLSearchParams(location.search).has('emulador');
@@ -1081,7 +1082,7 @@ const Google = {
     const [app, auth, fs, check] = await Promise.all([import(url('app')), import(url('auth')), import(url('firestore')),
       conAppCheck ? import(url('app-check')) : null]);
     this.app = app.initializeApp(EMULADOR ? { apiKey: 'demo', authDomain: 'localhost', projectId: 'demo-libreta', appId: 'demo' } : FIREBASE_CONFIG);
-    if (check) check.initializeAppCheck(this.app, { provider: new check.ReCaptchaV3Provider(APP_CHECK_KEY), isTokenAutoRefreshEnabled: true });
+    if (check) check.initializeAppCheck(this.app, { provider: new check.ReCaptchaEnterpriseProvider(APP_CHECK_KEY), isTokenAutoRefreshEnabled: true });
     this.auth = auth.getAuth(this.app);
     this.db = fs.initializeFirestore(this.app, {
       ignoreUndefinedProperties: true,
