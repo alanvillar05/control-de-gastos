@@ -1078,7 +1078,7 @@ const Google = {
     const [app, auth, fs, check] = await Promise.all([import(url('app')), import(url('auth')), import(url('firestore')),
       conAppCheck ? import(url('app-check')) : null]);
     this.app = app.initializeApp(EMULADOR ? { apiKey: 'demo', authDomain: 'localhost', projectId: 'demo-libreta', appId: 'demo' } : FIREBASE_CONFIG);
-    if (check) check.initializeAppCheck(this.app, { provider: new check.ReCaptchaEnterpriseProvider(APP_CHECK_KEY), isTokenAutoRefreshEnabled: true });
+    if (check) check.initializeAppCheck(this.app, { provider: new check.ReCaptchaV3Provider(APP_CHECK_KEY), isTokenAutoRefreshEnabled: true });
     this.auth = auth.getAuth(this.app);
     this.db = fs.initializeFirestore(this.app, {
       ignoreUndefinedProperties: true,
