@@ -68,6 +68,10 @@ jobs:
               if [ -n "$v" ]; then printf '{"version":"%s"}\n' "$v" > "$dir/version.json"; fi
             fi
           done
+          # CSP: cada versión trae su propio .github/csp.py, que le agrega a su index.html la lista de
+          # sitios desde donde puede cargar código. Así un cambio en la CSP se prueba primero en la beta.
+          if [ -f estable/.github/csp.py ]; then python3 estable/.github/csp.py _site/index.html; fi
+          if [ -f prueba/.github/csp.py ] && [ -f _site/beta/index.html ]; then python3 prueba/.github/csp.py _site/beta/index.html; fi
           find _site -maxdepth 2 -type f | sort
 
       - uses: actions/configure-pages@v5
